@@ -21,8 +21,32 @@ import Fastify from 'fastify';
 import { pool } from './db.ts';
 import { estimateArrival, type HopSource } from './eta.ts';
 import { planJourney, planByHour } from './journey.ts';
+import {
+  createAccount,
+  checkLogin,
+  findUserById,
+  userIdFromToken,
+  tokenFromAuthorizationHeader,
+  type PublicUser,
+} from './auth.ts';
 
 const app = Fastify({ logger: true });
+
+/**
+ * Work out who is making this request, from the Authorization header.
+ *
+ * Returns null for anyone not logged in, which is a perfectly normal
+ * answer here rather than an error - every bus-related endpoint in this
+ * file works fine without an account, and only the /auth routes below
+ * actually care. See db/schema_auth.sql for why it is that way round.
+ */
+async function currentUser(req: { headers: Record<string, unknown> }): Promise<PublicUser | null> {
+  const header = req.headers['authorization'];
+  const token = tokenFromAuthorizationHeader(typeof header === 'string' ? header : undefined);
+  const userId = userIdFromToken(token);
+  if (!userId) return null;
+  return findUserById(userId);
+}
 
 /**
  * Turn the hop-by-hop quality breakdown into one word a person can act on.
@@ -115,6 +139,86 @@ app.get('/health', async (_req, reply) => {
     reply.code(503);
     return { ok: false, error: 'database unreachable' };
   }
+});
+
+// ---------------------------------------------------------------------------
+// POST /auth/signup - create an account.
+//
+//   { "email": "...", "password": "...", "displayName": "..." }
+//
+// All the real decisions (password rules, how the hash is stored, how long
+// a login lasts) live in auth.ts and were proved by api/check-auth.ts -
+// 41 checks - before this endpoint existed. This is HTTP translation only,
+// same as every other route in this file.
+// ---------------------------------------------------------------------------
+app.post<{
+  Body: { email?: string; password?: string; displayName?: string };
+}>('/auth/signup', async (req, reply) => {
+  const { email, password, displayName } = req.body ?? {};
+
+  if (!email || !password || !displayName) {
+    reply.code(400);
+    return { error: 'email, password and displayName are all required.' };
+  }
+
+  const result = await createAccount({ email, password, displayName });
+
+  if (!result.ok) {
+    // 409 Conflict for "that email is taken", 400 for "what you sent is
+    // not acceptable". Different problems, and the app shows them
+    // differently - one means "log in instead", the other "fix this field".
+    reply.code(result.reason.includes('already exists') ? 409 : 400);
+    return { ok: false, error: result.reason };
+  }
+
+  reply.code(201);
+  return { ok: true, user: result.user, token: result.token };
+});
+
+// ---------------------------------------------------------------------------
+// POST /auth/login - exchange an email and password for a token.
+//
+// Always answers 401 with the same wording whether the email is unknown or
+// the password is wrong. That is deliberate and is explained in full in
+// auth.ts (checkLogin) - saying which half was wrong would turn this into
+// a way of discovering which addresses have accounts.
+// ---------------------------------------------------------------------------
+app.post<{
+  Body: { email?: string; password?: string };
+}>('/auth/login', async (req, reply) => {
+  const { email, password } = req.body ?? {};
+
+  if (!email || !password) {
+    reply.code(400);
+    return { error: 'email and password are both required.' };
+  }
+
+  const result = await checkLogin({ email, password });
+
+  if (!result.ok) {
+    reply.code(401);
+    return { ok: false, error: result.reason };
+  }
+
+  return { ok: true, user: result.user, token: result.token };
+});
+
+// ---------------------------------------------------------------------------
+// GET /auth/me - who does this token belong to?
+//
+// The app calls this on startup with whatever token it has saved, to find
+// out whether that token is still good. It is the one place a stored login
+// gets checked against the server rather than trusted blindly.
+// ---------------------------------------------------------------------------
+app.get('/auth/me', async (req, reply) => {
+  const user = await currentUser(req);
+
+  if (!user) {
+    reply.code(401);
+    return { ok: false, error: 'Not signed in.' };
+  }
+
+  return { ok: true, user };
 });
 
 // ---------------------------------------------------------------------------

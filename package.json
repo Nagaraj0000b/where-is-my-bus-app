@@ -13,15 +13,19 @@
     "api": "node api/src/server.ts",
     "test-api": "node api/test-api.ts",
     "check-journey": "node api/check-journey.ts",
-    "check-all": "node api/check-eta.ts && node api/check-journey.ts",
+    "check-auth": "node api/check-auth.ts",
+    "check-all": "node api/check-eta.ts && node api/check-journey.ts && node api/check-auth.ts",
     "bench": "node api/bench.ts"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "fastify": "^5.12.1",
     "gtfs-realtime-bindings": "^1.1.1",
+    "jsonwebtoken": "^9.0.3",
     "pg": "^8.23.0"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.2.0",
     "@types/pg": "^8.23.1",
     "typescript": "^7.0.2"
