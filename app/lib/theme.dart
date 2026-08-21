@@ -155,41 +155,48 @@ ThemeData buildWimbTheme() {
     // Headings are condensed and tight; body text is not. The contrast
     // between the two is most of what makes the app look designed rather
     // than default.
+    // SIZED FOR A NARROW PHONE, NOT A BROWSER.
+    //
+    // Every size here was cut after looking at real screenshots from the
+    // test phone, which is 359dp wide - narrower than most. At the sizes
+    // this started with, only five route rows fitted on a very tall
+    // screen and route descriptions wrapped to five lines. Text that
+    // looks comfortable in a wide preview is too big in the hand.
     textTheme: const TextTheme(
       displaySmall: TextStyle(
         fontFamily: WimbFonts.condensed,
         fontFamilyFallback: WimbFonts.fallback,
-        fontSize: 34,
+        fontSize: 27,
         fontWeight: FontWeight.w700,
-        letterSpacing: -0.3,
+        letterSpacing: -0.2,
         color: WimbColors.ink,
       ),
       headlineMedium: TextStyle(
         fontFamily: WimbFonts.condensed,
         fontFamilyFallback: WimbFonts.fallback,
-        fontSize: 26,
+        fontSize: 21,
         fontWeight: FontWeight.w700,
         color: WimbColors.ink,
       ),
       titleLarge: TextStyle(
         fontFamily: WimbFonts.condensed,
         fontFamilyFallback: WimbFonts.fallback,
-        fontSize: 20,
+        fontSize: 17,
         fontWeight: FontWeight.w700,
         color: WimbColors.ink,
       ),
-      titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: WimbColors.ink),
+      titleMedium: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: WimbColors.ink),
       // A small all-caps label used above each section. The wide letter
       // spacing is what makes it read as a label rather than as a heading.
       labelSmall: TextStyle(
-        fontSize: 11,
+        fontSize: 10.5,
         fontWeight: FontWeight.w700,
-        letterSpacing: 1.2,
+        letterSpacing: 1.1,
         color: WimbColors.inkMuted,
       ),
-      bodyLarge: TextStyle(fontSize: 15, color: WimbColors.ink, height: 1.4),
-      bodyMedium: TextStyle(fontSize: 14, color: WimbColors.ink, height: 1.4),
-      bodySmall: TextStyle(fontSize: 12.5, color: WimbColors.inkMuted, height: 1.35),
+      bodyLarge: TextStyle(fontSize: 14, color: WimbColors.ink, height: 1.35),
+      bodyMedium: TextStyle(fontSize: 13, color: WimbColors.ink, height: 1.35),
+      bodySmall: TextStyle(fontSize: 11.5, color: WimbColors.inkMuted, height: 1.3),
     ),
 
     // A plain cream bar with a dark title, not a slab of red on every
@@ -207,7 +214,7 @@ ThemeData buildWimbTheme() {
       titleTextStyle: TextStyle(
         fontFamily: WimbFonts.condensed,
         fontFamilyFallback: WimbFonts.fallback,
-        fontSize: 25,
+        fontSize: 21,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.2,
         color: WimbColors.ink,
@@ -254,13 +261,13 @@ ThemeData buildWimbTheme() {
       style: FilledButton.styleFrom(
         backgroundColor: WimbColors.dtcRed,
         foregroundColor: Colors.white,
-        // Tall and fully rounded - a phone button you hit with a thumb,
-        // not a 40px web button you click with a cursor.
-        minimumSize: const Size.fromHeight(56),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        // Comfortably over the ~48dp thumb-target minimum, without the
+        // slab look 56 gave it on a narrow screen.
+        minimumSize: const Size.fromHeight(50),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
         textStyle: const TextStyle(
           fontFamily: WimbFonts.body,
-          fontSize: 16,
+          fontSize: 15,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.2,
         ),
@@ -337,8 +344,8 @@ class RouteBoard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: compact ? 9 : 13,
-        vertical: compact ? 5 : 9,
+        horizontal: compact ? 8 : 11,
+        vertical: compact ? 4 : 7,
       ),
       decoration: BoxDecoration(
         color: WimbColors.board,
@@ -362,7 +369,7 @@ class RouteBoard extends StatelessWidget {
               fontFamily: WimbFonts.condensed,
               fontFamilyFallback: WimbFonts.fallback,
               color: WimbColors.boardText,
-              fontSize: compact ? 14 : 19,
+              fontSize: compact ? 13 : 16,
               fontWeight: FontWeight.w700,
               // Wide spacing is what sells the destination-board look -
               // real boards space their letters out to fill the width.

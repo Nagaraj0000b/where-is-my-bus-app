@@ -497,43 +497,40 @@ class _OptionCard extends StatelessWidget {
   /// is drawn as the destination board it would carry on the road, so it
   /// matches what someone is actually looking for at the stop.
   Widget _leg(BuildContext context, JourneyLeg leg, {required bool isLastLeg}) {
-    return Row(
+    // The board sits above the steps rather than beside them. Beside, it
+    // was squeezed into a narrow column and came out as "SONIPAT B...",
+    // and the instructions next to it wrapped every couple of words.
+    // Stacked, the board gets the full card width and the instructions
+    // get theirs.
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Capped, same reasoning as the search list in routes_screen.dart -
-        // a route number or a destination board text long enough (both
-        // happen in Delhi's GTFS) would otherwise push this row past the
-        // card's edge.
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 130),
+        Align(
+          alignment: Alignment.centerLeft,
           child: RouteBoard(routeName: leg.routeName, destination: leg.routeDesc),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _step(context, Icons.arrow_circle_up, 'Board at ${leg.boardPlace}',
-                  WimbColors.delhiGreen),
-              const SizedBox(height: 3),
-              _step(
-                context,
-                Icons.arrow_circle_down,
-                isLastLeg
-                    ? 'Get off at ${leg.alightPlace}'
-                    : 'Get off at ${leg.alightPlace}, then change',
-                isLastLeg ? WimbColors.dtcRed : WimbColors.trustMedium,
-              ),
-              if (leg.busEveryMinutes != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  'about every ${leg.busEveryMinutes!.round()} min · ${leg.stops} stops',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ],
-          ),
+        const SizedBox(height: 9),
+        _step(context, Icons.arrow_circle_up, 'Board at ${leg.boardPlace}',
+            WimbColors.delhiGreen),
+        const SizedBox(height: 3),
+        _step(
+          context,
+          Icons.arrow_circle_down,
+          isLastLeg
+              ? 'Get off at ${leg.alightPlace}'
+              : 'Get off at ${leg.alightPlace}, then change',
+          isLastLeg ? WimbColors.dtcRed : WimbColors.trustMedium,
         ),
+        if (leg.busEveryMinutes != null) ...[
+          const SizedBox(height: 5),
+          Padding(
+            padding: const EdgeInsets.only(left: 20),
+            child: Text(
+              'about every ${leg.busEveryMinutes!.round()} min · ${leg.stops} stops',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        ],
       ],
     );
   }

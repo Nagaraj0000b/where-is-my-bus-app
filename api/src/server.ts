@@ -688,7 +688,27 @@ app.get<{ Params: { routeId: string } }>('/routes/:routeId/stops', async (req, r
            -- /stops/near above. Without it this came back as the JSON
            -- STRING "1374" rather than the number 1374, which crashed the
            -- app's num cast the moment anyone opened a route.
-           round(st.dist_along_shape_m::numeric, 0)::int AS metres_along_route
+           round(st.dist_along_shape_m::numeric, 0)::int AS metres_along_route,
+
+           -- Was the hop INTO this stop ever actually observed?
+           --
+           -- /eta refuses outright if any leg between the two chosen stops
+           -- was never seen, because summing over a missing leg would
+           -- quietly report a journey as shorter than it is. That refusal
+           -- is right, but it used to arrive only after picking two stops,
+           -- with no way to tell in advance which pairs would work.
+           --
+           -- It bites most at the START of a route: 61% of routes have no
+           -- timing for the first hop, because stop 0 is the terminal
+           -- where buses stand still, so no clean crossing was ever
+           -- extracted. The first stop is also the most obvious one to
+           -- tap, so the app needs to say so up front.
+           EXISTS (
+             SELECT 1 FROM route_segment_travel_time rs
+             WHERE rs.route_id = $1
+               AND rs.day_type = 'any'
+               AND rs.to_stop_sequence = st.stop_sequence
+           ) AS has_timing
     FROM stop_times st
     JOIN trips t ON t.snapshot_id = st.snapshot_id AND t.trip_id = st.trip_id
     JOIN stops s ON s.snapshot_id = st.snapshot_id AND s.stop_id = st.stop_id

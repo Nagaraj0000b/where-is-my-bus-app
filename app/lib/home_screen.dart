@@ -48,30 +48,31 @@ class HomeScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SectionLabel('What do you need?'),
+                // One short line each. These were two-sentence
+                // descriptions that wrapped to three lines apiece, which
+                // turned the home screen into a page of marketing copy -
+                // the label is what someone reads, the rest was noise.
                 _ActionCard(
                   icon: Icons.alt_route,
                   title: 'Plan a journey',
-                  description: 'Two places in, ranked ways to travel out - '
-                      'walk, wait and ride all counted.',
+                  description: 'Ranked by total time, not ride time',
                   onTap: () => onOpenTab(1),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 _ActionCard(
                   icon: Icons.schedule,
                   title: 'When should I travel?',
-                  description: 'The same trip costed for every hour, so you '
-                      'can see if leaving later is faster.',
+                  description: 'See if leaving later is actually faster',
                   onTap: () => onOpenTab(2),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 _ActionCard(
                   icon: Icons.directions_bus_filled,
                   title: 'Browse routes',
-                  description: 'Every stop a route calls at, in order - and '
-                      'the time between any two of them.',
+                  description: 'Every stop a route calls at, in order',
                   onTap: () => onOpenTab(3),
                 ),
-                const SizedBox(height: 26),
+                const SizedBox(height: 24),
                 const SectionLabel('What this is built on'),
                 _StatsPanel(),
               ],
@@ -202,21 +203,21 @@ class _RedHeader extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Text(
             user == null ? 'Where are you headed?' : 'Hello, ${user!.firstName}.',
             style: const TextStyle(
               fontFamily: WimbFonts.condensed,
               fontFamilyFallback: WimbFonts.fallback,
               color: Colors.white,
-              fontSize: 27,
+              fontSize: 23,
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 3),
           Text(
             'Every time comes with a range and how much to trust it.',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 13.5),
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 12.5),
           ),
         ],
       ),
@@ -247,30 +248,35 @@ class _ActionCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(15),
+          padding: const EdgeInsets.fromLTRB(13, 13, 8, 13),
           child: Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: WimbColors.dtcRed.withValues(alpha: 0.09),
-                  borderRadius: BorderRadius.circular(11),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: WimbColors.dtcRed, size: 23),
+                child: Icon(icon, color: WimbColors.dtcRed, size: 21),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 13),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title, style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 2),
-                    Text(description, style: Theme.of(context).textTheme.bodySmall),
+                    const SizedBox(height: 1),
+                    Text(
+                      description,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: WimbColors.inkMuted),
+              const Icon(Icons.chevron_right, size: 20, color: WimbColors.inkMuted),
             ],
           ),
         ),

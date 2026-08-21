@@ -70,13 +70,13 @@ class PlacePickerRow extends StatelessWidget {
       onTap: () => _openSearch(context),
       borderRadius: BorderRadius.circular(14),
       child: Padding(
-        // Tall enough to be an easy thumb target - a phone row should be
-        // comfortably over the ~48dp minimum, not a 40dp web input.
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+        // Still a comfortable thumb target (well over ~48dp with both
+        // lines), just not the oversized block it was on a narrow screen.
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: [
-            Icon(icon, size: 19, color: iconColor),
-            const SizedBox(width: 14),
+            Icon(icon, size: 17, color: iconColor),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -85,9 +85,9 @@ class PlacePickerRow extends StatelessWidget {
                   Text(
                     label,
                     style: const TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.7,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
                       color: WimbColors.inkMuted,
                     ),
                   ),
@@ -97,7 +97,7 @@ class PlacePickerRow extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 16.5,
+                      fontSize: 15,
                       fontWeight: chosen ? FontWeight.w600 : FontWeight.w400,
                       color: chosen ? WimbColors.ink : WimbColors.inkMuted.withValues(alpha: 0.65),
                     ),

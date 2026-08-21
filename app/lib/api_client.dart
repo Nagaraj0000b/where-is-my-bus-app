@@ -405,10 +405,20 @@ class RouteStop {
   final String stopName;
   final double metresAlongRoute;
 
+  /// Whether the hop INTO this stop was ever actually recorded.
+  ///
+  /// False means no bus was ever observed crossing from the previous stop
+  /// to this one, so any estimate spanning it would be missing a leg and
+  /// /eta will refuse. The screen uses this to say so BEFORE two stops are
+  /// picked - see the comment on the query in api/src/server.ts for why
+  /// this bites hardest at the first stop of a route.
+  final bool hasTiming;
+
   RouteStop({
     required this.stopSequence,
     required this.stopName,
     required this.metresAlongRoute,
+    required this.hasTiming,
   });
 
   factory RouteStop.fromJson(Map<String, dynamic> json) {
@@ -416,6 +426,10 @@ class RouteStop {
       stopSequence: json['stop_sequence'] as int,
       stopName: json['stop_name'] as String,
       metresAlongRoute: _asDouble(json['metres_along_route']),
+      // Defaults to true if an older server does not send the field, so a
+      // version mismatch degrades to the previous behaviour (find out on
+      // refusal) rather than marking every stop as having no data.
+      hasTiming: json['has_timing'] as bool? ?? true,
     );
   }
 }

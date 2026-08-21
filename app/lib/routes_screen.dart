@@ -68,16 +68,23 @@ class _RoutesScreenState extends State<RoutesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('ROUTES')),
+      appBar: AppBar(title: const Text('Routes')),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: TextField(
               controller: _controller,
+              // hintText, NOT labelText. A floating label on a filled box
+              // rises out of the field and sits above it in accent red,
+              // which is what made this look broken in the screenshot. A
+              // hint simply disappears as you type, which is what a search
+              // bar should do.
               decoration: InputDecoration(
-                labelText: 'Route number, e.g. 764',
-                prefixIcon: const Icon(Icons.search, color: WimbColors.inkMuted),
+                hintText: 'Route number, e.g. 764',
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                prefixIcon: const Icon(Icons.search, color: WimbColors.inkMuted, size: 20),
                 suffixIcon: _searching
                     ? const Padding(
                         padding: EdgeInsets.all(13),
@@ -129,29 +136,40 @@ class _RoutesScreenState extends State<RoutesScreen> {
               MaterialPageRoute(builder: (_) => RouteStopsScreen(route: route)),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(13),
+              padding: const EdgeInsets.fromLTRB(13, 11, 8, 11),
               child: Row(
                 children: [
-                  // The route drawn the way it appears on the bus itself.
-                  // Capped at a fixed max width - a plain Row child sizes
-                  // to its own content with no limit, and a long route
-                  // number like "764BSTLDOWN" is wide enough in this
-                  // condensed, wide-tracked style to push the row past the
-                  // screen edge. Above the cap, RouteBoard's own maxLines
-                  // and ellipsis (see theme.dart) take over instead of
-                  // shrinking the text further.
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 130),
-                    child: RouteBoard(routeName: route.routeShortName),
-                  ),
-                  const SizedBox(width: 13),
                   Expanded(
-                    child: Text(
-                      route.routeDesc.isEmpty ? 'Route ${route.routeShortName}' : route.routeDesc,
-                      style: const TextStyle(fontSize: 13.5, height: 1.3),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // The board sits on its OWN line rather than beside
+                        // the description. Side by side it was squeezed into
+                        // about a third of the width and every route came
+                        // out truncated - "TILAK NA...", "0118EXT(N..." -
+                        // which defeats the point of showing the number.
+                        // Align keeps it hugging its own text rather than
+                        // stretching across the card.
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: RouteBoard(routeName: route.routeShortName),
+                        ),
+                        const SizedBox(height: 7),
+                        Text(
+                          route.routeDesc.isEmpty
+                              ? 'Route ${route.routeShortName}'
+                              : route.routeDesc,
+                          // Delhi's route descriptions run long. Two lines
+                          // is enough to tell two routes apart; five made
+                          // only five results fit on the whole screen.
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12.5, height: 1.3),
+                        ),
+                      ],
                     ),
                   ),
-                  const Icon(Icons.chevron_right, color: WimbColors.inkMuted),
+                  const Icon(Icons.chevron_right, size: 20, color: WimbColors.inkMuted),
                 ],
               ),
             ),
@@ -284,103 +302,126 @@ class _RouteStopsScreenState extends ConsumerState<RouteStopsScreen> {
             ),
         ],
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // The route's own destination board, on the cream background
-          // rather than on a slab of red - the board is dark enough to
-          // stand out on its own, and a full-width red bar under every
-          // app bar was what made these screens feel like a web page.
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-            child: RouteBoard(
-              routeName: widget.route.routeShortName,
-              destination: widget.route.routeDesc,
-            ),
-          ),
-
-          // The tap-two-stops prompt, as a soft pill rather than a
-          // full-bleed coloured strip.
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-              decoration: BoxDecoration(
-                color: WimbColors.delhiGreenLight,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    _fromSeq == null ? Icons.touch_app : Icons.timer_outlined,
-                    size: 17,
-                    color: WimbColors.delhiGreen,
+      // ONE scroll for the whole page.
+      //
+      // This used to be a Column with the board, the prompt and the
+      // estimate pinned at the top and only the stop list scrolling
+      // underneath them. On a long route that left very little of the
+      // screen actually moving, and once an estimate appeared it ate a
+      // third of the display and would not go away. As slivers, everything
+      // scrolls together - the estimate scrolls off as you move down the
+      // stops, and comes back when you scroll up.
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // The route's own destination board, on the cream
+                // background rather than on a slab of red - a full-width
+                // red bar under every app bar was what made these screens
+                // feel like a web page.
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: RouteBoard(
+                      routeName: widget.route.routeShortName,
+                      destination: widget.route.routeDesc,
+                    ),
                   ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: Text(
-                      _instruction,
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        color: WimbColors.delhiGreen,
+                ),
+
+                // The tap-two-stops prompt, as a soft pill rather than a
+                // full-bleed coloured strip.
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: WimbColors.delhiGreenLight,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _fromSeq == null ? Icons.touch_app : Icons.timer_outlined,
+                          size: 16,
+                          color: WimbColors.delhiGreen,
+                        ),
+                        const SizedBox(width: 9),
+                        Expanded(
+                          child: Text(
+                            _instruction,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: WimbColors.delhiGreen,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                if (_fromSeq != null && _toSeq != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 2, 14, 2),
+                    child: _EtaCard(
+                      query: _EtaQuery(
+                        routeId: widget.route.routeId,
+                        from: _fromSeq!,
+                        to: _toSeq!,
                       ),
                     ),
                   ),
-                ],
-              ),
+                const SizedBox(height: 8),
+              ],
             ),
           ),
 
-          if (_fromSeq != null && _toSeq != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 2),
-              child: _EtaCard(
-                query: _EtaQuery(
-                  routeId: widget.route.routeId,
-                  from: _fromSeq!,
-                  to: _toSeq!,
-                ),
-              ),
+          stops.when(
+            loading: () => const SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(child: CircularProgressIndicator()),
             ),
-
-          Expanded(
-            child: stops.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              // A route the search just returned failing to load its stops
-              // is a real request failure (server unreachable, or it fell
-              // out of the feed snapshot between search and tap) - unlike
-              // an honest "no route found", trying again can genuinely
-              // help, so it's always offered here.
-              error: (err, _) => Padding(
+            // A route the search just returned failing to load its stops
+            // is a real request failure (server unreachable, or it fell
+            // out of the feed snapshot between search and tap) - unlike
+            // an honest "no route found", trying again can genuinely
+            // help, so it's always offered here.
+            error: (err, _) => SliverToBoxAdapter(
+              child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: ErrorCard(
                   message: err.toString(),
                   onRetry: () => ref.invalidate(routeStopsProvider(widget.route.routeId)),
                 ),
               ),
-              data: (stopList) => ListView.builder(
-                padding: const EdgeInsets.only(top: 8, bottom: 24),
-                itemCount: stopList.length,
-                itemBuilder: (context, i) => _StopRow(
-                  stop: stopList[i],
-                  isFirst: i == 0,
-                  isLast: i == stopList.length - 1,
-                  isFrom: stopList[i].stopSequence == _fromSeq,
-                  isTo: stopList[i].stopSequence == _toSeq,
-                  // Between the two picked stops - the stretch the
-                  // estimate actually covers, shown so the answer and the
-                  // list agree with each other visually.
-                  isBetween: _fromSeq != null &&
-                      _toSeq != null &&
-                      stopList[i].stopSequence > _fromSeq! &&
-                      stopList[i].stopSequence < _toSeq!,
-                  onTap: () => _handleTap(stopList[i]),
-                ),
+            ),
+            data: (stopList) => SliverList.builder(
+              itemCount: stopList.length,
+              itemBuilder: (context, i) => _StopRow(
+                stop: stopList[i],
+                isFirst: i == 0,
+                isLast: i == stopList.length - 1,
+                isFrom: stopList[i].stopSequence == _fromSeq,
+                isTo: stopList[i].stopSequence == _toSeq,
+                // Between the two picked stops - the stretch the
+                // estimate actually covers, shown so the answer and the
+                // list agree with each other visually.
+                isBetween: _fromSeq != null &&
+                    _toSeq != null &&
+                    stopList[i].stopSequence > _fromSeq! &&
+                    stopList[i].stopSequence < _toSeq!,
+                onTap: () => _handleTap(stopList[i]),
               ),
             ),
           ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 28)),
         ],
       ),
     );
@@ -456,25 +497,39 @@ class _StopRow extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 11),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         stop.stopName,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 13.5,
                           fontWeight: highlighted ? FontWeight.w700 : FontWeight.w400,
-                          color: WimbColors.ink,
+                          // Dimmed when no bus was ever recorded arriving
+                          // here, so the gap is visible before it becomes
+                          // a refusal.
+                          color: stop.hasTiming
+                              ? WimbColors.ink
+                              : WimbColors.inkMuted.withValues(alpha: 0.75),
                         ),
                       ),
                       if (isFrom || isTo)
                         Text(
                           isFrom ? 'Bus is here' : "You're waiting here",
                           style: const TextStyle(
-                            fontSize: 12,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.w600,
                             color: WimbColors.delhiGreen,
+                          ),
+                        )
+                      else if (!stop.hasTiming)
+                        Text(
+                          'no recorded timing',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontStyle: FontStyle.italic,
+                            color: WimbColors.inkMuted.withValues(alpha: 0.7),
                           ),
                         ),
                     ],
