@@ -1,0 +1,25 @@
+{
+  "workbench.iconTheme": "material-icon-theme",
+
+  // Paths are relative to whichever folder VS Code has open as its root.
+  // The app/... entries only bite when the whole project (this folder) is
+  // open - app/.vscode/settings.json has the same list for when "app" is
+  // opened by itself instead, since VS Code does not merge the two.
+  "files.exclude": {
+    "node_modules": true,
+    "package-lock.json": true,
+
+    "app/android": true,
+    "app/ios": true,
+    "app/linux": true,
+    "app/macos": true,
+    "app/windows": true,
+    "app/web": true,
+    "app/build": true,
+    "app/.dart_tool": true,
+    "app/.idea": true,
+    "app/.metadata": true,
+    "app/*.iml": true,
+    "app/pubspec.lock": true
+  }
+}

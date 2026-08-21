@@ -1,0 +1,25 @@
+# Never commit the key
+.env
+
+# The archive lives outside the repo (DATA_ROOT), but guard against
+# anyone pointing it here by accident.
+data/
+*.pb
+*.pb.gz
+*.jsonl
+
+node_modules/
+
+# Run logs from the API and the Flutter tooling. Regenerated every run,
+# sometimes hundreds of KB, and of no value to anyone reading the history.
+*.log
+
+# Local helper the browser preview needs; machine-specific absolute path.
+app/run_web.bat
+
+# The static GTFS snapshot. stop_times.txt alone is 151 MB, which is over
+# GitHub's 100 MB hard limit for a single file - this cannot be committed even
+# if you wanted to. Keep the zips somewhere outside the repo and reload with
+# db/load.sql. docs/static-feed-profile.md records what was in this one.
+delhi_buses_static_gtfs_v1/
+__MACOSX/
