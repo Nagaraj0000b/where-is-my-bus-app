@@ -71,24 +71,36 @@ class WimbColors {
   static const hairline = Color(0xFFE5D9C9);
 }
 
-/// Font family names, with fallbacks.
+/// The app's two typefaces, bundled with the app (see pubspec.yaml).
 ///
-/// These are Android's built-in families. On a platform that does not have
-/// them (the web build, for instance) Flutter quietly falls back to the
-/// next name in the list, so nothing breaks - it just looks less condensed.
+/// These are real font files, not system family names. Asking for a system
+/// family by name does not work: a phone with a custom system font
+/// substitutes its own, which on the OnePlus this was tested on rendered
+/// the entire app in a serif no matter what was requested here.
 class WimbFonts {
   WimbFonts._();
 
-  /// Condensed sans, for destination boards and headings.
-  static const condensed = 'sans-serif-condensed';
+  /// Condensed, for destination boards, headings and the wordmark.
+  static const condensed = 'BarlowCondensed';
 
   /// Ordinary body text.
-  static const body = 'Roboto';
+  static const body = 'Barlow';
 
-  /// Monospace, so digits line up in a column of times.
-  static const mono = 'monospace';
+  /// Kept as a name for the few places that want digits to line up in a
+  /// column. Barlow has no monospace cut, so those places use [tabular]
+  /// instead - same effect for numbers, without a third font file.
+  static const mono = 'Barlow';
 
-  static const fallback = <String>['Roboto', 'sans-serif'];
+  /// Makes every digit the same width, so a column of times or distances
+  /// lines up instead of jittering as the numbers change. This is what a
+  /// monospace font would have been used for, done properly.
+  static const tabular = <FontFeature>[FontFeature.tabularFigures()];
+
+  /// Empty on purpose. The fonts are bundled, so there is nothing to fall
+  /// back TO - and leaving a system name here would let the substitution
+  /// problem above creep back in. Kept as a named constant so call sites
+  /// do not need changing if that ever stops being true.
+  static const fallback = <String>[];
 }
 
 /// Turns the API's confidence word into the colour that represents it.
@@ -180,49 +192,60 @@ ThemeData buildWimbTheme() {
       bodySmall: TextStyle(fontSize: 12.5, color: WimbColors.inkMuted, height: 1.35),
     ),
 
+    // A plain cream bar with a dark title, not a slab of red on every
+    // screen. Red everywhere made the app feel like a web page with a
+    // branded masthead; here it is the accent, and the content is what
+    // carries the screen. The home screen keeps its red hero, because
+    // there it IS the content.
     appBarTheme: const AppBarTheme(
-      backgroundColor: WimbColors.dtcRed,
-      foregroundColor: Colors.white,
+      backgroundColor: WimbColors.cream,
+      foregroundColor: WimbColors.ink,
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
+      scrolledUnderElevation: 0,
       centerTitle: false,
       titleTextStyle: TextStyle(
         fontFamily: WimbFonts.condensed,
         fontFamilyFallback: WimbFonts.fallback,
-        fontSize: 22,
+        fontSize: 25,
         fontWeight: FontWeight.w700,
-        letterSpacing: 0.3,
-        color: Colors.white,
+        letterSpacing: 0.2,
+        color: WimbColors.ink,
       ),
     ),
 
-    // Cards get a hairline border instead of a drop shadow. On a cream
-    // background a shadow turns muddy, while a thin warm line stays crisp.
-    cardTheme: CardThemeData(
+    // No borders. A hairline outline around every card is a web pattern -
+    // on a phone it turns a screen into a stack of boxes. Separation comes
+    // from a slightly lighter surface against the cream background, which
+    // is quieter and lets the content group itself.
+    cardTheme: const CardThemeData(
       color: WimbColors.cardCream,
       elevation: 0,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: WimbColors.hairline),
+        borderRadius: BorderRadius.all(Radius.circular(18)),
       ),
     ),
 
+    // Filled, not outlined. An outlined box with a floating label is the
+    // single most web-looking thing a Flutter app can put on screen.
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: WimbColors.cardCream,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: WimbColors.hairline),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: WimbColors.hairline),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: WimbColors.dtcRed, width: 2),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: WimbColors.dtcRed, width: 1.6),
       ),
+      hintStyle: TextStyle(color: WimbColors.inkMuted.withValues(alpha: 0.7)),
       labelStyle: const TextStyle(color: WimbColors.inkMuted),
       floatingLabelStyle: const TextStyle(color: WimbColors.dtcRed, fontWeight: FontWeight.w600),
     ),
@@ -231,14 +254,15 @@ ThemeData buildWimbTheme() {
       style: FilledButton.styleFrom(
         backgroundColor: WimbColors.dtcRed,
         foregroundColor: Colors.white,
-        minimumSize: const Size.fromHeight(52),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        // Tall and fully rounded - a phone button you hit with a thumb,
+        // not a 40px web button you click with a cursor.
+        minimumSize: const Size.fromHeight(56),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         textStyle: const TextStyle(
-          fontFamily: WimbFonts.condensed,
-          fontFamilyFallback: WimbFonts.fallback,
-          fontSize: 17,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.4,
+          fontFamily: WimbFonts.body,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
         ),
       ),
     ),
@@ -326,6 +350,14 @@ class RouteBoard extends StatelessWidget {
         children: [
           Text(
             routeName.toUpperCase(),
+            // Delhi route numbers are not always short - "764BSTLDOWN" is
+            // a real one - and the wide letter spacing that sells the
+            // destination-board look makes long ones wider still. Without
+            // a limit this can outgrow whatever row it sits in; capping it
+            // here means the board itself can never be the cause of an
+            // overflow, whichever screen embeds it.
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontFamily: WimbFonts.condensed,
               fontFamilyFallback: WimbFonts.fallback,

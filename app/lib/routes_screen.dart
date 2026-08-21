@@ -133,7 +133,17 @@ class _RoutesScreenState extends State<RoutesScreen> {
               child: Row(
                 children: [
                   // The route drawn the way it appears on the bus itself.
-                  RouteBoard(routeName: route.routeShortName),
+                  // Capped at a fixed max width - a plain Row child sizes
+                  // to its own content with no limit, and a long route
+                  // number like "764BSTLDOWN" is wide enough in this
+                  // condensed, wide-tracked style to push the row past the
+                  // screen edge. Above the cap, RouteBoard's own maxLines
+                  // and ellipsis (see theme.dart) take over instead of
+                  // shrinking the text further.
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 130),
+                    child: RouteBoard(routeName: route.routeShortName),
+                  ),
                   const SizedBox(width: 13),
                   Expanded(
                     child: Text(
@@ -277,11 +287,11 @@ class _RouteStopsScreenState extends ConsumerState<RouteStopsScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // The route's own destination board, sitting under the app bar
-          // like the board above a windscreen.
-          Container(
-            width: double.infinity,
-            color: WimbColors.dtcRed,
+          // The route's own destination board, on the cream background
+          // rather than on a slab of red - the board is dark enough to
+          // stand out on its own, and a full-width red bar under every
+          // app bar was what made these screens feel like a web page.
+          Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
             child: RouteBoard(
               routeName: widget.route.routeShortName,
@@ -289,30 +299,37 @@ class _RouteStopsScreenState extends ConsumerState<RouteStopsScreen> {
             ),
           ),
 
-          // The tap-two-stops instruction, styled as a live prompt.
-          Container(
-            width: double.infinity,
-            color: WimbColors.delhiGreenLight,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              children: [
-                Icon(
-                  _fromSeq == null ? Icons.touch_app : Icons.timer_outlined,
-                  size: 16,
-                  color: WimbColors.delhiGreen,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _instruction,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: WimbColors.delhiGreen,
+          // The tap-two-stops prompt, as a soft pill rather than a
+          // full-bleed coloured strip.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              decoration: BoxDecoration(
+                color: WimbColors.delhiGreenLight,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _fromSeq == null ? Icons.touch_app : Icons.timer_outlined,
+                    size: 17,
+                    color: WimbColors.delhiGreen,
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      _instruction,
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: WimbColors.delhiGreen,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
 
@@ -469,8 +486,8 @@ class _StopRow extends StatelessWidget {
                 child: Text(
                   '${(stop.metresAlongRoute / 1000).toStringAsFixed(1)} km',
                   style: const TextStyle(
-                    fontFamily: WimbFonts.mono,
-                    fontSize: 11.5,
+                    fontFeatures: WimbFonts.tabular,
+                    fontSize: 12,
                     color: WimbColors.inkMuted,
                   ),
                 ),

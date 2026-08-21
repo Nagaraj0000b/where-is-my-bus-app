@@ -31,11 +31,16 @@ import 'api_client.dart' show apiBaseUrl, ApiUnreachableException;
 /// not belong in a plain text preferences file that any backup or rooted
 /// device can read straight off the disk.
 ///
-/// The default options are used deliberately. As of version 11 this
-/// package already encrypts with AES-GCM and wraps the key with an RSA key
-/// held in the Android Keystore, so the encryption flag earlier versions
-/// needed no longer exists - asking for it now is a compile error rather
-/// than a setting.
+/// On Android this package's default already encrypts each value with AES
+/// and keeps the key itself in the Android Keystore, so the token is not
+/// sitting in readable form anywhere on the device.
+///
+/// PINNED TO VERSION 9 ON PURPOSE. Version 11 needs Android SDK 37 to
+/// build, and the SDK 37 package installed on this machine declares its
+/// API level as "37.0" rather than a whole number, which Gradle cannot
+/// match - so the build fails looking for a target that is, confusingly,
+/// right there. Version 9 builds against SDK 34 and stores the token just
+/// as safely. Worth revisiting once a well-formed SDK 37 is installed.
 const _secureStorage = FlutterSecureStorage();
 
 const _tokenKey = 'wimb.auth.token';

@@ -9,7 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'api_client.dart';
 import 'error_card.dart';
-import 'place_search_field.dart';
+import 'place_picker.dart';
 import 'theme.dart';
 
 /// The two points and the day type being compared. Day type is part of the
@@ -69,28 +69,17 @@ class ByHourScreen extends ConsumerStatefulWidget {
 }
 
 class _ByHourScreenState extends ConsumerState<ByHourScreen> {
-  final _fromController = TextEditingController();
-  final _toController = TextEditingController();
+  // No text controllers - places arrive only from the search page, so
+  // there is no typed text that could drift out of step with the
+  // coordinates behind it. Same reasoning as journey_screen.dart.
   PlaceSuggestion? _fromPlace;
   PlaceSuggestion? _toPlace;
   String _dayType = 'weekday';
 
-  @override
-  void dispose() {
-    _fromController.dispose();
-    _toController.dispose();
-    super.dispose();
-  }
-
   void _compare() {
-    if (_fromPlace == null || _fromController.text != _fromPlace!.stopName) {
-      _showMessage('Pick a "From" place from the suggestions.');
-      return;
-    }
-    if (_toPlace == null || _toController.text != _toPlace!.stopName) {
-      _showMessage('Pick a "To" place from the suggestions.');
-      return;
-    }
+    // The button is disabled until both are chosen, so this is just belt
+    // and braces.
+    if (_fromPlace == null || _toPlace == null) return;
 
     final query = ByHourQuery(
       fromLat: _fromPlace!.lat,
@@ -104,67 +93,72 @@ class _ByHourScreenState extends ConsumerState<ByHourScreen> {
     ref.read(byHourQueryProvider.notifier).state = query;
   }
 
-  void _showMessage(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-  }
-
   @override
   Widget build(BuildContext context) {
     final query = ref.watch(byHourQueryProvider);
 
+    final canCompare = _fromPlace != null && _toPlace != null;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('WHEN SHOULD I TRAVEL?')),
+      appBar: AppBar(title: const Text('When should I travel?')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
         children: [
           Card(
-            child: Padding(
-              padding: const EdgeInsets.all(15),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SectionLabel('Compare every hour'),
-                  PlaceSearchField(
-                    label: 'From',
-                    controller: _fromController,
-                    onPicked: (place) => setState(() => _fromPlace = place),
-                  ),
-                  const SizedBox(height: 10),
-                  PlaceSearchField(
-                    label: 'To',
-                    controller: _toController,
-                    onPicked: (place) => setState(() => _toPlace = place),
-                  ),
-                  const SizedBox(height: 14),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(
-                        value: 'weekday',
-                        label: Text('Weekday'),
-                        icon: Icon(Icons.work_outline, size: 16),
-                      ),
-                      ButtonSegment(
-                        value: 'weekend',
-                        label: Text('Weekend'),
-                        icon: Icon(Icons.weekend_outlined, size: 16),
-                      ),
-                    ],
-                    selected: {_dayType},
-                    onSelectionChanged: (selection) =>
-                        setState(() => _dayType = selection.first),
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: _compare,
-                    icon: const Icon(Icons.bar_chart, size: 20),
-                    label: const Text('Compare hours'),
-                  ),
-                ],
-              ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                PlacePickerRow(
+                  label: 'FROM',
+                  place: _fromPlace,
+                  icon: Icons.trip_origin,
+                  iconColor: WimbColors.delhiGreen,
+                  onPicked: (place) => setState(() => _fromPlace = place),
+                ),
+                const Divider(height: 1, indent: 48),
+                PlacePickerRow(
+                  label: 'TO',
+                  place: _toPlace,
+                  icon: Icons.place,
+                  iconColor: WimbColors.dtcRed,
+                  onPicked: (place) => setState(() => _toPlace = place),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+
+          // A pill pair, sized to the thumb.
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'weekday', label: Text('Weekday')),
+              ButtonSegment(value: 'weekend', label: Text('Weekend')),
+            ],
+            selected: {_dayType},
+            showSelectedIcon: false,
+            onSelectionChanged: (selection) => setState(() => _dayType = selection.first),
+            style: ButtonStyle(
+              backgroundColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.selected)
+                    ? WimbColors.dtcRed
+                    : WimbColors.cardCream,
+              ),
+              foregroundColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.selected)
+                    ? Colors.white
+                    : WimbColors.inkMuted,
+              ),
+              side: const WidgetStatePropertyAll(BorderSide.none),
+              padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 15)),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: canCompare ? _compare : null,
+            child: const Text('Compare hours'),
+          ),
+          const SizedBox(height: 24),
           if (query == null) _emptyState(context) else _ResultsArea(query: query),
         ],
       ),
@@ -347,14 +341,20 @@ class _HourRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
-            width: 44,
+            // Wide enough for "05:00" without wrapping. It was 44 and the
+            // label broke onto a second line as "05:0 / 0", which looked
+            // broken - the width has to fit the text, not the other way
+            // round, so maxLines below makes that impossible to miss again.
+            width: 52,
             child: Text(
               label,
+              maxLines: 1,
               style: TextStyle(
-                // Monospace so every hour label is the same width and the
-                // bars all start on one clean vertical line.
-                fontFamily: WimbFonts.mono,
-                fontSize: 12.5,
+                // Tabular figures so every hour is the same width and the
+                // bars all start on one clean vertical line - what a
+                // monospace font would have been used for.
+                fontFeatures: WimbFonts.tabular,
+                fontSize: 13,
                 fontWeight: emphasised ? FontWeight.w700 : FontWeight.w400,
                 color: emphasised ? WimbColors.ink : WimbColors.inkMuted,
               ),
@@ -415,8 +415,8 @@ class _HourRow extends StatelessWidget {
             '${minutes.round()}m',
             textAlign: TextAlign.right,
             style: TextStyle(
-              fontFamily: WimbFonts.mono,
-              fontSize: 12.5,
+              fontFeatures: WimbFonts.tabular,
+              fontSize: 13,
               fontWeight: isBest || isWorst ? FontWeight.w700 : FontWeight.w400,
               color: isBest
                   ? WimbColors.delhiGreen

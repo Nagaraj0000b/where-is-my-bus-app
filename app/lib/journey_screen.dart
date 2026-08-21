@@ -14,7 +14,7 @@ import 'package:intl/intl.dart';
 
 import 'api_client.dart';
 import 'error_card.dart';
-import 'place_search_field.dart';
+import 'place_picker.dart';
 import 'theme.dart';
 
 /// Turns a number of minutes from now into a real clock time, e.g. "7:15 PM".
@@ -93,42 +93,25 @@ class JourneyScreen extends ConsumerStatefulWidget {
 }
 
 class _JourneyScreenState extends ConsumerState<JourneyScreen> {
-  // Empty on purpose - a real commuter doesn't have a pre-filled journey
-  // to start from. Both fields have to be searched (or "From" filled from
-  // GPS) before "Find buses" will do anything.
-  final _fromController = TextEditingController();
-  final _toController = TextEditingController();
-
-  // The actual coordinates behind each text box. Only set when someone
-  // picks a suggestion (or uses their GPS location) - never guessed from
-  // whatever text happens to be typed, so a half-typed search can't
-  // silently plan a journey from the wrong place.
+  // The two chosen places, each with the real coordinates behind it. Null
+  // until something is picked - a commuter has no pre-filled journey.
+  //
+  // There are no text controllers any more. A place can now ONLY arrive by
+  // being picked from the search page or from GPS, so the old problem of
+  // text that no longer matches the coordinates behind it - someone typing
+  // over a chosen suggestion - cannot happen at all rather than being
+  // guarded against.
   PlaceSuggestion? _fromPlace;
   PlaceSuggestion? _toPlace;
 
-  // True while waiting on the phone's GPS, so the button can show a
-  // spinner instead of looking like it did nothing.
+  // True while waiting on the phone's GPS, so the row can show a spinner
+  // instead of looking like it did nothing.
   bool _locating = false;
 
-  @override
-  void dispose() {
-    _fromController.dispose();
-    _toController.dispose();
-    super.dispose();
-  }
-
   void _search() {
-    // Guards against the case where someone typed over a picked
-    // suggestion but never tapped a new one - the text box would show
-    // something that isn't backed by real coordinates any more.
-    if (_fromPlace == null || _fromController.text != _fromPlace!.stopName) {
-      _showMessage('Pick a "From" place from the suggestions.');
-      return;
-    }
-    if (_toPlace == null || _toController.text != _toPlace!.stopName) {
-      _showMessage('Pick a "To" place from the suggestions.');
-      return;
-    }
+    // The button is disabled until both are set, so this is belt and
+    // braces rather than the main guard.
+    if (_fromPlace == null || _toPlace == null) return;
 
     final query = JourneyQuery(
       fromLat: _fromPlace!.lat,
@@ -173,13 +156,15 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
       );
+      // Setting the place is all that is needed now - the From row reads
+      // straight from it, where before the text box had to be kept in step
+      // separately.
       setState(() {
         _fromPlace = PlaceSuggestion(
           stopName: 'Your location',
           lat: position.latitude,
           lon: position.longitude,
         );
-        _fromController.text = _fromPlace!.stopName;
       });
     } catch (e) {
       _showMessage("Couldn't get your location: $e");
@@ -197,58 +182,81 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
   Widget build(BuildContext context) {
     final query = ref.watch(journeyQueryProvider);
 
+    final canSearch = _fromPlace != null && _toPlace != null;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('PLAN A JOURNEY')),
+      appBar: AppBar(title: const Text('Plan a journey')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
         children: [
-          // The two place boxes live inside one card, so they read as a
-          // single "where to where" question rather than two unrelated
-          // fields floating on the background.
-          Card(
+          _whereToWhereCard(context),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: canSearch ? _search : null,
+            child: const Text('Find buses'),
+          ),
+          const SizedBox(height: 24),
+          if (query == null) _emptyState(context) else _ResultsArea(query: query),
+        ],
+      ),
+    );
+  }
+
+  /// The from/to block: two tall tappable rows joined by a route line, the
+  /// way a map app does it - not two text fields and a label.
+  Widget _whereToWhereCard(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          PlacePickerRow(
+            label: 'FROM',
+            place: _fromPlace,
+            icon: Icons.trip_origin,
+            iconColor: WimbColors.delhiGreen,
+            onPicked: (place) => setState(() => _fromPlace = place),
+          ),
+          // Indented so the divider starts past the icons, letting the two
+          // rows read as one connected block rather than two separate ones.
+          const Divider(height: 1, indent: 48),
+          PlacePickerRow(
+            label: 'TO',
+            place: _toPlace,
+            icon: Icons.place,
+            iconColor: WimbColors.dtcRed,
+            onPicked: (place) => setState(() => _toPlace = place),
+          ),
+          const Divider(height: 1),
+          // A quiet strip along the bottom rather than a button floating
+          // in the middle of the form.
+          InkWell(
+            onTap: _locating ? null : _useMyLocation,
             child: Padding(
-              padding: const EdgeInsets.all(15),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SectionLabel('Where to where?'),
-                  PlaceSearchField(
-                    label: 'From',
-                    controller: _fromController,
-                    onPicked: (place) => setState(() => _fromPlace = place),
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: _locating ? null : _useMyLocation,
-                      icon: _locating
-                          ? const SizedBox(
-                              width: 15,
-                              height: 15,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.my_location, size: 17),
-                      style: TextButton.styleFrom(foregroundColor: WimbColors.delhiGreen),
-                      label: const Text('Use my location'),
+                  if (_locating)
+                    const SizedBox(
+                      width: 15,
+                      height: 15,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    const Icon(Icons.my_location, size: 17, color: WimbColors.delhiGreen),
+                  const SizedBox(width: 9),
+                  Text(
+                    _locating ? 'Finding you...' : 'Use my location as the start',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: WimbColors.delhiGreen,
                     ),
-                  ),
-                  PlaceSearchField(
-                    label: 'To',
-                    controller: _toController,
-                    onPicked: (place) => setState(() => _toPlace = place),
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: _search,
-                    icon: const Icon(Icons.search, size: 20),
-                    label: const Text('Find buses'),
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 20),
-          if (query == null) _emptyState(context) else _ResultsArea(query: query),
         ],
       ),
     );
@@ -492,7 +500,14 @@ class _OptionCard extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        RouteBoard(routeName: leg.routeName, destination: leg.routeDesc),
+        // Capped, same reasoning as the search list in routes_screen.dart -
+        // a route number or a destination board text long enough (both
+        // happen in Delhi's GTFS) would otherwise push this row past the
+        // card's edge.
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 130),
+          child: RouteBoard(routeName: leg.routeName, destination: leg.routeDesc),
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(

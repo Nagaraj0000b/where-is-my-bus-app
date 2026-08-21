@@ -39,7 +39,7 @@ dependencies:
   flutter_riverpod: ^2.5.0
   geolocator: ^13.0.0
   intl: ^0.19.0
-  flutter_secure_storage: ^11.0.0
+  flutter_secure_storage: 9.2.2
 
 dev_dependencies:
   flutter_test:
@@ -62,6 +62,35 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Barlow and its condensed cut, bundled rather than named.
+  #
+  # Naming a system family (fontFamily: 'Roboto') is NOT enough on a real
+  # phone: a device with a custom system font substitutes its own, and on
+  # the OnePlus this was tested on that rendered the whole app in a serif.
+  # Bundling the actual files is the only way to control what is drawn.
+  #
+  # Barlow is a grotesk drawn for public signage, which suits a bus app;
+  # the condensed cut is what the destination boards use. Both are SIL
+  # Open Font Licence, so shipping them inside the app is allowed.
+  # Six files, ~640 KB in total.
+  fonts:
+    - family: Barlow
+      fonts:
+        - asset: assets/fonts/Barlow-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Barlow-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Barlow-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Barlow-Bold.ttf
+          weight: 700
+    - family: BarlowCondensed
+      fonts:
+        - asset: assets/fonts/BarlowCondensed-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/BarlowCondensed-Bold.ttf
+          weight: 700
 
   # To add assets to your application, add an assets section, like this:
   # assets:

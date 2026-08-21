@@ -17,11 +17,23 @@ import 'package:http/http.dart' as http;
 // one with (PowerShell): Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -eq "Wi-Fi" }
 const String apiBaseUrl = 'http://10.3.6.147:3000';
 
-/// Turns a JSON number into a double, whether the server sent 10 or 10.5.
-/// Dart's json.decode gives back an int for whole numbers, and casting
-/// that straight to double throws - so every number field goes through
-/// this instead of a raw `as double`.
-double _asDouble(dynamic value) => (value as num).toDouble();
+/// Turns a JSON number into a double, whether the server sent 10 or 10.5 -
+/// or, awkwardly, "10". Dart's json.decode gives back an int for whole
+/// numbers, and casting that straight to double throws, so every number
+/// field goes through this instead of a raw `as double`.
+///
+/// The string case is not hypothetical: Postgres NUMERIC columns come back
+/// from node-postgres as strings (it will not silently risk losing
+/// precision converting to a JS number), and it is easy for that to leak
+/// into a JSON response unless every query remembers to cast back to int
+/// or float8 - as /routes/:id/stops did until this was found on a real
+/// route. Handling it here too, not only by fixing the query, means the
+/// exact same crash cannot come back from some future endpoint that
+/// forgets the same cast.
+double _asDouble(dynamic value) {
+  if (value is String) return double.parse(value);
+  return (value as num).toDouble();
+}
 
 /// One leg of a journey: riding a single bus from one place to another.
 class JourneyLeg {

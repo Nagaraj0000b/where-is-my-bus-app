@@ -559,8 +559,14 @@ app.get<{
     SELECT place_id, stop_id, stop_name, metres_away FROM (
       SELECT DISTINCT ON (sp.place_id)
              sp.place_id, s.stop_id, s.stop_name,
+             -- Cast to int, not left as numeric: node-postgres returns
+             -- numeric/decimal columns as STRINGS (it can't otherwise
+             -- guarantee no precision is lost converting to a JS number),
+             -- and that string survives straight into the JSON response -
+             -- "metres_away": "420" instead of 420. Already rounded to a
+             -- whole metre, so int loses nothing and fixes the type.
              round(ST_Distance(s.geom::geography,
-                   ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography)::numeric, 0) AS metres_away
+                   ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography)::numeric, 0)::int AS metres_away
       FROM stops s
       JOIN stop_place sp ON sp.stop_id = s.stop_id
       WHERE s.snapshot_id = (SELECT max(snapshot_id) FROM stops)
@@ -678,7 +684,11 @@ app.get<{ Params: { routeId: string } }>('/routes/:routeId/stops', async (req, r
     `
     SELECT DISTINCT ON (st.stop_sequence)
            st.stop_sequence, st.stop_id, s.stop_name,
-           round(st.dist_along_shape_m::numeric, 0) AS metres_along_route
+           -- ::int, not left as numeric - see the identical comment on
+           -- /stops/near above. Without it this came back as the JSON
+           -- STRING "1374" rather than the number 1374, which crashed the
+           -- app's num cast the moment anyone opened a route.
+           round(st.dist_along_shape_m::numeric, 0)::int AS metres_along_route
     FROM stop_times st
     JOIN trips t ON t.snapshot_id = st.snapshot_id AND t.trip_id = st.trip_id
     JOIN stops s ON s.snapshot_id = st.snapshot_id AND s.stop_id = st.stop_id
