@@ -447,6 +447,66 @@ Future<List<RouteStop>> fetchRouteStops(String routeId) async {
       .toList();
 }
 
+/// What the app is built on, counted from the database rather than
+/// hardcoded here - see /stats in api/src/server.ts for why that matters.
+class ProjectStats {
+  final int routes;
+  final int stops;
+  final int routeSegments;
+  final int stopPassages;
+  final int vehiclesSeen;
+  final int daysRecorded;
+  final int weekdayErrorSeconds;
+  final List<String> honesty;
+
+  ProjectStats({
+    required this.routes,
+    required this.stops,
+    required this.routeSegments,
+    required this.stopPassages,
+    required this.vehiclesSeen,
+    required this.daysRecorded,
+    required this.weekdayErrorSeconds,
+    required this.honesty,
+  });
+
+  factory ProjectStats.fromJson(Map<String, dynamic> json) {
+    final measured = json['measured'] as Map<String, dynamic>;
+    final accuracy = json['accuracy'] as Map<String, dynamic>;
+    return ProjectStats(
+      routes: measured['routes'] as int,
+      stops: measured['stops'] as int,
+      routeSegments: measured['routeSegments'] as int,
+      stopPassages: measured['stopPassages'] as int,
+      vehiclesSeen: measured['vehiclesSeen'] as int,
+      daysRecorded: measured['daysRecorded'] as int,
+      weekdayErrorSeconds: accuracy['weekdayTwentyHopErrorSeconds'] as int,
+      honesty: (json['honesty'] as List).map((h) => h as String).toList(),
+    );
+  }
+}
+
+/// Fetches the "what this is built on" figures for the home screen.
+Future<ProjectStats> fetchStats() async {
+  final uri = Uri.parse('$apiBaseUrl/stats');
+
+  http.Response response;
+  try {
+    response = await http.get(uri).timeout(const Duration(seconds: 10));
+  } catch (_) {
+    throw ApiUnreachableException(
+      "Can't reach the server. Is the API running, and is the phone on "
+      "the same WiFi as the laptop ($apiBaseUrl)?",
+    );
+  }
+
+  if (response.statusCode != 200) {
+    throw ApiUnreachableException('Server error (HTTP ${response.statusCode}).');
+  }
+
+  return ProjectStats.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+}
+
 /// The honest arrival window for one stop - never a bare number. `text` is
 /// already worded by the server (e.g. "7 min to 12 min", or "any moment, up
 /// to 5 min" when the early end of the range would otherwise land in the

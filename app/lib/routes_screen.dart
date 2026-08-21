@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'api_client.dart';
 import 'error_card.dart';
+import 'theme.dart';
 
 /// Fetches the stop list for whatever route is currently open. `.family`
 /// keys the cache by routeId; `.autoDispose` drops it once the detail
@@ -67,19 +68,19 @@ class _RoutesScreenState extends State<RoutesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Routes')),
+      appBar: AppBar(title: const Text('ROUTES')),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
             child: TextField(
               controller: _controller,
               decoration: InputDecoration(
                 labelText: 'Route number, e.g. 764',
-                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.search, color: WimbColors.inkMuted),
                 suffixIcon: _searching
                     ? const Padding(
-                        padding: EdgeInsets.all(12),
+                        padding: EdgeInsets.all(13),
                         child: SizedBox(
                           width: 16,
                           height: 16,
@@ -99,37 +100,80 @@ class _RoutesScreenState extends State<RoutesScreen> {
 
   Widget _body() {
     if (!_hasSearched) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'Type a route number to see where it goes and every stop '
-            'along the way.',
-            textAlign: TextAlign.center,
-          ),
-        ),
+      return _placeholder(
+        icon: Icons.directions_bus_filled,
+        title: 'Find a route',
+        detail: 'Type a route number to see where it goes, every stop along '
+            'the way, and how long between any two of them.',
       );
     }
     if (_results.isEmpty) {
-      return const Center(child: Text('No route matches that number.'));
+      return _placeholder(
+        icon: Icons.search_off,
+        title: 'No route matches that number',
+        detail: 'Delhi route numbers often carry a letter, like 764B or '
+            '764STL. Try just the digits.',
+      );
     }
+
     return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
       itemCount: _results.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
+      separatorBuilder: (_, _) => const SizedBox(height: 9),
       itemBuilder: (context, i) {
         final route = _results[i];
-        return ListTile(
-          title: Text(
-            route.routeShortName,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          subtitle: route.routeDesc.isEmpty ? null : Text(route.routeDesc),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => RouteStopsScreen(route: route)),
+        return Card(
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => RouteStopsScreen(route: route)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(13),
+              child: Row(
+                children: [
+                  // The route drawn the way it appears on the bus itself.
+                  RouteBoard(routeName: route.routeShortName),
+                  const SizedBox(width: 13),
+                  Expanded(
+                    child: Text(
+                      route.routeDesc.isEmpty ? 'Route ${route.routeShortName}' : route.routeDesc,
+                      style: const TextStyle(fontSize: 13.5, height: 1.3),
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: WimbColors.inkMuted),
+                ],
+              ),
+            ),
           ),
         );
       },
+    );
+  }
+
+  Widget _placeholder({
+    required IconData icon,
+    required String title,
+    required String detail,
+  }) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 34),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 44, color: WimbColors.hairline),
+            const SizedBox(height: 14),
+            Text(title, style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
+            const SizedBox(height: 6),
+            Text(
+              detail,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -220,7 +264,7 @@ class _RouteStopsScreenState extends ConsumerState<RouteStopsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.route.routeShortName),
+        title: Text(widget.route.routeShortName.toUpperCase()),
         actions: [
           if (_fromSeq != null)
             IconButton(
@@ -233,21 +277,48 @@ class _RouteStopsScreenState extends ConsumerState<RouteStopsScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (widget.route.routeDesc.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Text(
-                widget.route.routeDesc,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+          // The route's own destination board, sitting under the app bar
+          // like the board above a windscreen.
+          Container(
+            width: double.infinity,
+            color: WimbColors.dtcRed,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+            child: RouteBoard(
+              routeName: widget.route.routeShortName,
+              destination: widget.route.routeDesc,
             ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Text(_instruction, style: Theme.of(context).textTheme.bodySmall),
           ),
+
+          // The tap-two-stops instruction, styled as a live prompt.
+          Container(
+            width: double.infinity,
+            color: WimbColors.delhiGreenLight,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                Icon(
+                  _fromSeq == null ? Icons.touch_app : Icons.timer_outlined,
+                  size: 16,
+                  color: WimbColors.delhiGreen,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _instruction,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: WimbColors.delhiGreen,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           if (_fromSeq != null && _toSeq != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 2),
               child: _EtaCard(
                 query: _EtaQuery(
                   routeId: widget.route.routeId,
@@ -256,6 +327,7 @@ class _RouteStopsScreenState extends ConsumerState<RouteStopsScreen> {
                 ),
               ),
             ),
+
           Expanded(
             child: stops.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -271,52 +343,179 @@ class _RouteStopsScreenState extends ConsumerState<RouteStopsScreen> {
                   onRetry: () => ref.invalidate(routeStopsProvider(widget.route.routeId)),
                 ),
               ),
-              data: (stopList) => ListView.separated(
+              data: (stopList) => ListView.builder(
+                padding: const EdgeInsets.only(top: 8, bottom: 24),
                 itemCount: stopList.length,
-                separatorBuilder: (_, _) => const Divider(height: 1),
-                itemBuilder: (context, i) {
-                  final stop = stopList[i];
-                  final isFrom = stop.stopSequence == _fromSeq;
-                  final isTo = stop.stopSequence == _toSeq;
-                  return ListTile(
-                    onTap: () => _handleTap(stop),
-                    tileColor: isFrom
-                        ? Colors.green.shade50
-                        : isTo
-                            ? Colors.blue.shade50
-                            : null,
-                    leading: CircleAvatar(
-                      radius: 12,
-                      backgroundColor: isFrom
-                          ? Colors.green
-                          : isTo
-                              ? Colors.blue
-                              : null,
-                      child: isFrom
-                          ? const Icon(Icons.directions_bus, size: 13, color: Colors.white)
-                          : isTo
-                              ? const Icon(Icons.person_pin_circle, size: 13, color: Colors.white)
-                              : Text(
-                                  '${stop.stopSequence}',
-                                  style: const TextStyle(fontSize: 11),
-                                ),
-                    ),
-                    title: Text(stop.stopName),
-                    subtitle: isFrom
-                        ? const Text('Bus is here')
-                        : isTo
-                            ? const Text("You're here")
-                            : null,
-                    trailing: Text(
-                      '${(stop.metresAlongRoute / 1000).toStringAsFixed(1)} km',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  );
-                },
+                itemBuilder: (context, i) => _StopRow(
+                  stop: stopList[i],
+                  isFirst: i == 0,
+                  isLast: i == stopList.length - 1,
+                  isFrom: stopList[i].stopSequence == _fromSeq,
+                  isTo: stopList[i].stopSequence == _toSeq,
+                  // Between the two picked stops - the stretch the
+                  // estimate actually covers, shown so the answer and the
+                  // list agree with each other visually.
+                  isBetween: _fromSeq != null &&
+                      _toSeq != null &&
+                      stopList[i].stopSequence > _fromSeq! &&
+                      stopList[i].stopSequence < _toSeq!,
+                  onTap: () => _handleTap(stopList[i]),
+                ),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// One stop, drawn as a station on a route line.
+///
+/// The vertical line with a dot on it is the standard way transit maps
+/// show a sequence of stops, and it makes the order obvious in a way a
+/// plain list of names does not - particularly once two stops are picked
+/// and the stretch between them is highlighted.
+class _StopRow extends StatelessWidget {
+  final RouteStop stop;
+  final bool isFirst;
+  final bool isLast;
+  final bool isFrom;
+  final bool isTo;
+  final bool isBetween;
+  final VoidCallback onTap;
+
+  const _StopRow({
+    required this.stop,
+    required this.isFirst,
+    required this.isLast,
+    required this.isFrom,
+    required this.isTo,
+    required this.isBetween,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final highlighted = isFrom || isTo;
+    // The line is drawn thicker and in full colour along the stretch the
+    // estimate covers, and faint everywhere else.
+    final onEstimatedStretch = isFrom || isTo || isBetween;
+    final lineColor = onEstimatedStretch ? WimbColors.dtcRed : WimbColors.hairline;
+
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        color: highlighted ? WimbColors.delhiGreenLight.withValues(alpha: 0.6) : null,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // The route line and this stop's dot on it.
+              SizedBox(
+                width: 26,
+                child: Column(
+                  children: [
+                    // No line above the first stop or below the last -
+                    // the route starts and ends, it does not run off the
+                    // top and bottom of the screen.
+                    Expanded(
+                      child: Container(
+                        width: onEstimatedStretch ? 3 : 2,
+                        color: isFirst ? Colors.transparent : lineColor,
+                      ),
+                    ),
+                    _dot(),
+                    Expanded(
+                      child: Container(
+                        width: onEstimatedStretch ? 3 : 2,
+                        color: isLast ? Colors.transparent : lineColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 11),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        stop.stopName,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: highlighted ? FontWeight.w700 : FontWeight.w400,
+                          color: WimbColors.ink,
+                        ),
+                      ),
+                      if (isFrom || isTo)
+                        Text(
+                          isFrom ? 'Bus is here' : "You're waiting here",
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: WimbColors.delhiGreen,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                child: Text(
+                  '${(stop.metresAlongRoute / 1000).toStringAsFixed(1)} km',
+                  style: const TextStyle(
+                    fontFamily: WimbFonts.mono,
+                    fontSize: 11.5,
+                    color: WimbColors.inkMuted,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The dot on the line: a bus icon where the bus is, a person where the
+  /// rider is, and a plain numbered circle everywhere else.
+  Widget _dot() {
+    if (isFrom || isTo) {
+      return Container(
+        width: 26,
+        height: 26,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isFrom ? WimbColors.delhiGreen : WimbColors.dtcRed,
+          border: Border.all(color: WimbColors.cream, width: 2.5),
+        ),
+        child: Icon(
+          isFrom ? Icons.directions_bus : Icons.person_pin_circle,
+          size: 13,
+          color: Colors.white,
+        ),
+      );
+    }
+    return Container(
+      width: 17,
+      height: 17,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: WimbColors.cream,
+        border: Border.all(
+          color: isBetween ? WimbColors.dtcRed : WimbColors.hairline,
+          width: 2,
+        ),
+      ),
+      child: Text(
+        '${stop.stopSequence}',
+        style: const TextStyle(fontSize: 8, color: WimbColors.inkMuted, height: 1),
       ),
     );
   }
@@ -328,30 +527,16 @@ class _EtaCard extends ConsumerWidget {
   final _EtaQuery query;
   const _EtaCard({required this.query});
 
-  // Same three-colour scale as by_hour_screen.dart's _HourRow - kept as a
-  // small local copy rather than a shared helper, since each screen colours
-  // a different shaped widget with it and the switch is only six lines.
-  Color? _confidenceColor(String level) {
-    switch (level) {
-      case 'high':
-        return Colors.green;
-      case 'medium':
-        return Colors.orange;
-      case 'low':
-        return Colors.red;
-      default:
-        return null;
-    }
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final result = ref.watch(_etaResultProvider(query));
 
     return result.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
-        child: Center(child: CircularProgressIndicator()),
+      loading: () => const Card(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 26),
+          child: Center(child: CircularProgressIndicator()),
+        ),
       ),
       error: (err, _) => ErrorCard(
         message: err.toString(),
@@ -366,39 +551,55 @@ class _EtaCard extends ConsumerWidget {
             message: eta.unavailableReason ?? 'No estimate available for this pair of stops.',
           );
         }
+
         return Card(
-          color: Theme.of(context).colorScheme.primaryContainer,
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.circle, size: 10, color: _confidenceColor(eta.confidence.level)),
-                    const SizedBox(width: 8),
                     Expanded(
-                      child: Text(
-                        eta.range.text,
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SectionLabel('Journey time'),
+                          // The range, big. Deliberately the range and not
+                          // the single estimate - showing one number here
+                          // would be exactly the dishonesty this project
+                          // exists to correct.
+                          Text(
+                            eta.range.text,
+                            style: const TextStyle(
+                              fontFamily: WimbFonts.condensed,
+                              fontFamilyFallback: WimbFonts.fallback,
+                              fontSize: 30,
+                              fontWeight: FontWeight.w700,
+                              height: 1.05,
+                              color: WimbColors.ink,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            '${eta.stopsAway} stop${eta.stopsAway == 1 ? '' : 's'} along the route',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
                       ),
                     ),
+                    const Icon(Icons.directions_bus_filled, size: 30, color: WimbColors.hairline),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '${eta.stopsAway} stop${eta.stopsAway == 1 ? '' : 's'} away',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 13),
+                TrustDots(level: eta.confidence.level),
+                const SizedBox(height: 5),
                 Text(eta.confidence.because, style: Theme.of(context).textTheme.bodySmall),
-                const SizedBox(height: 8),
-                ...eta.caveats.map(
-                  (c) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Text('• $c', style: Theme.of(context).textTheme.bodySmall),
-                  ),
-                ),
+                const SizedBox(height: 12),
+                const Divider(),
+                const SizedBox(height: 10),
+                ...eta.caveats.map((c) => CaveatLine(c)),
               ],
             ),
           ),
