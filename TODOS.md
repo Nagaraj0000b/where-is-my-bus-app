@@ -17,6 +17,11 @@ Tasks needed to demonstrate the project end-to-end to professors, reviewers, and
 - [ ] **Backend Passenger Route Simulator**
   - Create `tools/simulate-passenger.js` that replays GPS pings along a real route geometry (Route 764) stop by stop.
   - Demonstrate live terminal output proving passenger telemetry fills the gap when agency GPS is absent.
+- [ ] **Interactive Map Integration (`flutter_map` + OpenStreetMap)**
+  - Add `flutter_map` and `latlong2` to `app/pubspec.yaml` (pure Flutter, 100% free, zero Google API keys or billing).
+  - Create reusable `RouteMapWidget` to render route polylines and stop markers.
+  - Integrate map into `JourneyScreen` (shows journey path, boarding pin, destination pin) and `RoutesScreen` (shows full route across Delhi).
+  - Add animated marker support to show simulated bus/passenger moving along the route.
 - [ ] **Academic Defense & Architecture Summary**
   - Prepare a concise 1-page reference summarizing:
     1. Data lineage: AIS-140 GPS -> DIMTS -> OTD Delhi -> Azure Recorder -> PostGIS.
@@ -31,9 +36,9 @@ Tasks needed to demonstrate the project end-to-end to professors, reviewers, and
 - [ ] **"I'm On This Bus" Mode (Crowdsourcing Client)**
   - Add an optional toggle on the Route view allowing a commuter to broadcast their trip progress.
   - Include transparent battery and privacy consent indicators.
-- [ ] **Map Visualization (MapLibre)**
-  - Integrate route polyline rendering for chosen journeys using cached `shapes.txt` coordinates.
-  - Show user location relative to nearby stops on a lightweight vector map.
+- [ ] **Map Visualization (`flutter_map`)**
+  - Integrate route polyline rendering for chosen journeys using cached route shape coordinates.
+  - Show user location relative to nearby stops on the OpenStreetMap canvas.
 - [ ] **Pre-packaged Demo Builds**
   - Run `flutter build web` to keep a self-contained offline browser build ready for presentation.
   - Generate release Android APK (`flutter build apk`) for on-phone demonstration without requiring a dev laptop.
