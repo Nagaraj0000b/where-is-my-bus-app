@@ -1,0 +1,222 @@
+<mxfile host="app.diagrams.net" modified="2026-09-06T06:00:00.000Z" agent="Antigravity" version="24.0.0">
+  <!-- PAGE 1: USE CASE DIAGRAM -->
+  <diagram id="use-case-diag" name="1. Use Case Diagram">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" background="#f8fafc">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- System Boundary Box -->
+        <mxCell id="sys_box" value="Where Is My Bus — Delhi (Transit Platform)" style="shape=rect;rounded=1;arcSize=4;fillColor=#ffffff;strokeColor=#475569;strokeWidth=2;dashed=0;align=center;verticalAlign=top;fontStyle=1;fontSize=16;fontColor=#1e293b;spacingTop=12;" vertex="1" parent="1">
+          <mxGeometry x="240" y="40" width="680" height="740" as="geometry" />
+        </mxCell>
+
+        <!-- ACTORS -->
+        <!-- Actor: Commuter -->
+        <mxCell id="actor_commuter" value="Commuter&#xa;(Rider at stop)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#e2e8f0;strokeColor=#1e293b;strokeWidth=2;fontSize=13;fontStyle=1;fontColor=#0f172a;" vertex="1" parent="1">
+          <mxGeometry x="60" y="160" width="45" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Actor: Passenger On-Board -->
+        <mxCell id="actor_passenger" value="Passenger On-Board&#xa;(Crowdsource contributor)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#e2e8f0;strokeColor=#0284c7;strokeWidth=2;fontSize=13;fontStyle=1;fontColor=#0369a1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="460" width="45" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Actor: Delhi OTD Agency -->
+        <mxCell id="actor_otd" value="Delhi Transit Agency&#xa;(OTD / DIMTS AIS-140)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#fef3c7;strokeColor=#d97706;strokeWidth=2;fontSize=13;fontStyle=1;fontColor=#92400e;" vertex="1" parent="1">
+          <mxGeometry x="980" y="240" width="45" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Actor: Offline Pipeline / DB -->
+        <mxCell id="actor_pipeline" value="PostGIS Pipeline&#xa;&amp; Evaluation Harness" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#f3e8ff;strokeColor=#9333ea;strokeWidth=2;fontSize=13;fontStyle=1;fontColor=#6b21a8;" vertex="1" parent="1">
+          <mxGeometry x="980" y="560" width="45" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- USE CASES (Commuter) -->
+        <mxCell id="uc_plan" value="Plan Journey (A to B)&#xa;Ranked by Total Time&#xa;(Walk + Wait + Ride)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;strokeWidth=2;fontSize=12;fontColor=#0369a1;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="90" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_byhour" value="Compare Departure Hours&#xa;('When Should I Travel?')" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;strokeWidth=2;fontSize=12;fontColor=#0369a1;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="190" width="200" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_eta" value="View Confidence-Banded ETA&#xa;('Range + Provenance/Because')" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#16a34a;strokeWidth=2;fontSize=12;fontColor=#15803d;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="280" width="210" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_routes" value="Search Routes &amp;&#xa;Inspect Stop Sequences" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#475569;strokeWidth=1.5;fontSize=12;fontColor=#334155;" vertex="1" parent="1">
+          <mxGeometry x="280" y="370" width="190" height="55" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_map" value="View Route &amp; Stop on Map&#xa;(OpenStreetMap canvas)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#475569;strokeWidth=1.5;fontSize=12;fontColor=#334155;" vertex="1" parent="1">
+          <mxGeometry x="540" y="280" width="190" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- USE CASES (Crowdsource) -->
+        <mxCell id="uc_crowd" value="Broadcast 'I am on this bus'&#xa;(Passenger GPS Telemetry)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffedd5;strokeColor=#ea580c;strokeWidth=2;fontSize=12;fontColor=#c2410c;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="475" width="210" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- USE CASES (Internal System / Pipeline) -->
+        <mxCell id="uc_sanitize" value="Filter GPS Noise &amp; Teleportation&#xa;(150m off-route, &gt;80km/h check)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fee2e2;strokeColor=#dc2626;strokeWidth=1.5;fontSize=12;fontColor=#991b1b;" vertex="1" parent="1">
+          <mxGeometry x="580" y="470" width="220" height="65" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_ingest" value="Poll Real-Time Protobuf&#xa;(VehiclePositions.pb every 10s)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#d97706;strokeWidth=1.5;fontSize=12;fontColor=#92400e;" vertex="1" parent="1">
+          <mxGeometry x="660" y="160" width="210" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_passages" value="Extract Real Stop Passages&#xa;(Linear Crossing Interpolation)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f3e8ff;strokeColor=#9333ea;strokeWidth=1.5;fontSize=12;fontColor=#6b21a8;" vertex="1" parent="1">
+          <mxGeometry x="650" y="580" width="210" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_cv" value="7-Fold Cross-Validation&#xa;&amp; Day-Type Calibration" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f3e8ff;strokeColor=#9333ea;strokeWidth=2;fontSize=12;fontColor=#6b21a8;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="680" width="220" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- RELATIONSHIPS -->
+        <mxCell id="e_com_plan" edge="1" source="actor_commuter" target="uc_plan" parent="1" style="strokeColor=#0284c7;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_com_byhour" edge="1" source="actor_commuter" target="uc_byhour" parent="1" style="strokeColor=#0284c7;strokeWidth=1.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_com_eta" edge="1" source="actor_commuter" target="uc_eta" parent="1" style="strokeColor=#16a34a;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_com_routes" edge="1" source="actor_commuter" target="uc_routes" parent="1" style="strokeColor=#475569;strokeWidth=1.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_include_map" value="&lt;&lt;extend&gt;&gt;" edge="1" source="uc_map" target="uc_plan" parent="1" style="dashed=1;strokeColor=#64748b;strokeWidth=1.5;align=center;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_pas_crowd" edge="1" source="actor_passenger" target="uc_crowd" parent="1" style="strokeColor=#ea580c;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_crowd_filter" value="&lt;&lt;include&gt;&gt;" edge="1" source="uc_crowd" target="uc_sanitize" parent="1" style="dashed=1;strokeColor=#ea580c;strokeWidth=1.5;align=center;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_otd_ingest" edge="1" source="actor_otd" target="uc_ingest" parent="1" style="strokeColor=#d97706;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ingest_filter" value="&lt;&lt;include&gt;&gt;" edge="1" source="uc_ingest" target="uc_sanitize" parent="1" style="dashed=1;strokeColor=#d97706;strokeWidth=1.5;align=center;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_pipe_passages" edge="1" source="actor_pipeline" target="uc_passages" parent="1" style="strokeColor=#9333ea;strokeWidth=1.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_pipe_cv" edge="1" source="actor_pipeline" target="uc_cv" parent="1" style="strokeColor=#9333ea;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_pass_cv" value="&lt;&lt;include&gt;&gt;" edge="1" source="uc_passages" target="uc_cv" parent="1" style="dashed=1;strokeColor=#9333ea;strokeWidth=1.5;align=center;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <!-- PAGE 2: COMPONENT & CLASS DIAGRAM -->
+  <diagram id="component-class-diag" name="2. Component &amp; Class Architecture">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" background="#f8fafc">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- SUB-SYSTEM 1: FLUTTER APP -->
+        <mxCell id="pkg_app" value="&lt;&lt;Component&gt;&gt;&#xa;Frontend: Flutter Mobile Client (Dart + Riverpod)" style="shape=folder;fontStyle=1;tabWidth=160;tabHeight=30;tabPosition=left;html=1;boundedLbl=1;fillColor=#e0f2fe;strokeColor=#0284c7;strokeWidth=2;fontSize=14;fontColor=#0369a1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="320" height="740" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cls_homeshell" value="&lt;&lt;Widget / State&gt;&gt;&#xa;HomeShell &amp; AuthGate&#xa;--&#xa;+ activeTab: int&#xa;+ currentUser: User?&#xa;--&#xa;+ switchTab(index: int)&#xa;+ checkTokenOnLaunch()" style="shape=rect;rounded=1;fillColor=#ffffff;strokeColor=#0284c7;strokeWidth=1.5;fontSize=11;fontColor=#0f172a;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="60" y="100" width="280" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cls_journeyscreen" value="&lt;&lt;Widget&gt;&gt;&#xa;JourneyScreen&#xa;--&#xa;- fromPlace: PlaceSuggestion?&#xa;- toPlace: PlaceSuggestion?&#xa;- locating: bool&#xa;--&#xa;+ useMyLocation()&#xa;+ searchJourney()&#xa;+ renderConfidenceCard()" style="shape=rect;rounded=1;fillColor=#ffffff;strokeColor=#0284c7;strokeWidth=1.5;fontSize=11;fontColor=#0f172a;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="60" y="220" width="280" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cls_routemap" value="&lt;&lt;Widget&gt;&gt;&#xa;RouteMapWidget (flutter_map)&#xa;--&#xa;+ routePolyline: List&lt;LatLng&gt;&#xa;+ startPin: LatLng&#xa;+ destPin: LatLng&#xa;+ liveBusMarker: LatLng?&#xa;--&#xa;+ renderOpenStreetMap()" style="shape=rect;rounded=1;fillColor=#ffffff;strokeColor=#0284c7;strokeWidth=1.5;fontSize=11;fontColor=#0f172a;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="60" y="360" width="280" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cls_apiclient" value="&lt;&lt;Service&gt;&gt;&#xa;ApiClient&#xa;--&#xa;+ baseUrl: String&#xa;--&#xa;+ fetchJourney(from, to): JourneyResult&#xa;+ fetchByHour(from, to): HourlyResult&#xa;+ searchStops(query): List&lt;Place&gt;&#xa;+ searchRoutes(query): List&lt;Route&gt;&#xa;+ postCrowdsourcePing(telemetry)" style="shape=rect;rounded=1;fillColor=#ffffff;strokeColor=#0284c7;strokeWidth=1.5;fontSize=11;fontColor=#0f172a;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="60" y="500" width="280" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- SUB-SYSTEM 2: BACKEND FASTIFY -->
+        <mxCell id="pkg_api" value="&lt;&lt;Component&gt;&gt;&#xa;Backend: Fastify Server (TypeScript / Node 25)" style="shape=folder;fontStyle=1;tabWidth=160;tabHeight=30;tabPosition=left;html=1;boundedLbl=1;fillColor=#f0fdf4;strokeColor=#16a34a;strokeWidth=2;fontSize=14;fontColor=#15803d;verticalAlign=top;align=left;spacingLeft=10;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="420" y="40" width="340" height="740" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cls_server" value="&lt;&lt;HTTP Controller&gt;&gt;&#xa;FastifyServer (server.ts)&#xa;--&#xa;+ GET /journey (from, to, at)&#xa;+ GET /journey/by-hour (from, to)&#xa;+ GET /eta (route, from, to, at)&#xa;+ GET /stops/near &amp; /stops/search&#xa;+ GET /routes/search &amp; /:id/stops&#xa;+ POST /auth/signup &amp; /login&#xa;+ POST /crowdsource/ping" style="shape=rect;rounded=1;fillColor=#ffffff;strokeColor=#16a34a;strokeWidth=1.5;fontSize=11;fontColor=#0f172a;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="440" y="100" width="300" height="150" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cls_journeyplanner" value="&lt;&lt;Domain Engine&gt;&gt;&#xa;JourneyPlanner (journey.ts)&#xa;--&#xa;- walkSpeed: 80 m/min&#xa;- walkRadius: 800m&#xa;--&#xa;+ planJourney(coords): JourneyOptions&#xa;+ planByHour(coords, dayType): BestWorst&#xa;- rankByTotalTime(walk, wait, ride)" style="shape=rect;rounded=1;fillColor=#ffffff;strokeColor=#16a34a;strokeWidth=1.5;fontSize=11;fontColor=#0f172a;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="440" y="270" width="300" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cls_etaengine" value="&lt;&lt;Domain Engine&gt;&gt;&#xa;EtaEngine (eta.ts)&#xa;--&#xa;+ estimateArrival(route, from, to, at)&#xa;+ computeResidualBand(hops, dayType)&#xa;+ describeConfidence(quality, hops): Trust" style="shape=rect;rounded=1;fillColor=#ffffff;strokeColor=#16a34a;strokeWidth=1.5;fontSize=11;fontColor=#0f172a;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="440" y="410" width="300" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cls_authservice" value="&lt;&lt;Service&gt;&gt;&#xa;AuthService (auth.ts)&#xa;--&#xa;+ createAccount(email, password)&#xa;+ checkLogin(email, password)&#xa;+ verifyJwt(token): UserId" style="shape=rect;rounded=1;fillColor=#ffffff;strokeColor=#16a34a;strokeWidth=1.5;fontSize=11;fontColor=#0f172a;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="440" y="530" width="300" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cls_dbpool" value="&lt;&lt;Infrastructure&gt;&gt;&#xa;DbPool (db.ts)&#xa;--&#xa;+ pool: pg.Pool&#xa;--&#xa;+ query(sql, params): Promise&lt;Rows&gt;" style="shape=rect;rounded=1;fillColor=#ffffff;strokeColor=#16a34a;strokeWidth=1.5;fontSize=11;fontColor=#0f172a;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="440" y="640" width="300" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- SUB-SYSTEM 3: DATABASE / PIPELINE -->
+        <mxCell id="pkg_db" value="&lt;&lt;Component&gt;&gt;&#xa;Data Layer: PostgreSQL 17 + PostGIS" style="shape=folder;fontStyle=1;tabWidth=160;tabHeight=30;tabPosition=left;html=1;boundedLbl=1;fillColor=#fdf4ff;strokeColor=#c026d3;strokeWidth=2;fontSize=14;fontColor=#a21caf;verticalAlign=top;align=left;spacingLeft=10;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="820" y="40" width="310" height="740" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cls_tbl_static" value="&lt;&lt;Static GTFS Relational Tables&gt;&gt;&#xa;• stops (stop_id, name, lat, lon, geom)&#xa;• routes (route_id, short_name, desc)&#xa;• trips (trip_id, route_id, shape_id)&#xa;• shapes (shape_id, lat, lon, dist_m)&#xa;• stop_times (trip_id, stop_id, dist_m)" style="shape=rect;rounded=1;fillColor=#ffffff;strokeColor=#c026d3;strokeWidth=1.5;fontSize=11;fontColor=#0f172a;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="840" y="100" width="270" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cls_tbl_places" value="&lt;&lt;Spatial Graph Indexes&gt;&gt;&#xa;• stop_place (stop_id, place_id)&#xa;• route_places (route_id, place_id, seq)&#xa;• place_frequency (headway &amp; gaps)" style="shape=rect;rounded=1;fillColor=#ffffff;strokeColor=#c026d3;strokeWidth=1.5;fontSize=11;fontColor=#0f172a;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="840" y="230" width="270" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cls_tbl_realtime" value="&lt;&lt;Cleaned Telemetry Storage&gt;&gt;&#xa;• realtime_frame (frame_id, timestamp)&#xa;• vehicle_position (vehicle_id, lat, lon)&#xa;• vehicle_progress (dist_m, accepted)" style="shape=rect;rounded=1;fillColor=#ffffff;strokeColor=#c026d3;strokeWidth=1.5;fontSize=11;fontColor=#0f172a;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="840" y="340" width="270" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cls_tbl_traveltimes" value="&lt;&lt;Mined Travel Times (Statistical)&gt;&gt;&#xa;• observed_stop_passage (9.73M rows)&#xa;• route_segment_travel_time (68k rows)&#xa;  [mean, median, p25, p75 by hour/daytype]&#xa;• eta_calibration_fold (7-fold CV bands)" style="shape=rect;rounded=1;fillColor=#ffffff;strokeColor=#c026d3;strokeWidth=1.5;fontSize=11;fontColor=#0f172a;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="840" y="460" width="270" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cls_tbl_auth" value="&lt;&lt;Security / Auth&gt;&gt;&#xa;• users (id, email, password_hash)&#xa;• sessions (token, user_id, expires_at)" style="shape=rect;rounded=1;fillColor=#ffffff;strokeColor=#c026d3;strokeWidth=1.5;fontSize=11;fontColor=#0f172a;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="840" y="600" width="270" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- CONNECTING ARROWS BETWEEN COMPONENTS -->
+        <mxCell id="e_app_to_api" value="HTTP / JSON" edge="1" source="cls_apiclient" target="cls_server" parent="1" style="strokeColor=#0284c7;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_server_to_planner" edge="1" source="cls_server" target="cls_journeyplanner" parent="1" style="strokeColor=#16a34a;strokeWidth=1.5;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_planner_to_eta" edge="1" source="cls_journeyplanner" target="cls_etaengine" parent="1" style="strokeColor=#16a34a;strokeWidth=1.5;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_api_to_db" value="SQL Queries (pg pool)" edge="1" source="cls_dbpool" target="cls_tbl_traveltimes" parent="1" style="strokeColor=#c026d3;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
