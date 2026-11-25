@@ -52,29 +52,39 @@ final byHourQueryProvider = StateProvider<ByHourQuery?>((ref) => null);
 
 final byHourResultProvider = FutureProvider.autoDispose
     .family<ByHourResult, ByHourQuery>((ref, query) {
-  return fetchJourneyByHour(
-    fromLat: query.fromLat,
-    fromLon: query.fromLon,
-    toLat: query.toLat,
-    toLon: query.toLon,
-    dayType: query.dayType,
-  );
-});
+      return fetchJourneyByHour(
+        fromLat: query.fromLat,
+        fromLon: query.fromLon,
+        toLat: query.toLat,
+        toLon: query.toLon,
+        dayType: query.dayType,
+      );
+    });
 
 class ByHourScreen extends ConsumerStatefulWidget {
-  const ByHourScreen({super.key});
+  final PlaceSuggestion? initialFrom;
+  final PlaceSuggestion? initialTo;
+
+  const ByHourScreen({super.key, this.initialFrom, this.initialTo});
 
   @override
   ConsumerState<ByHourScreen> createState() => _ByHourScreenState();
 }
 
 class _ByHourScreenState extends ConsumerState<ByHourScreen> {
-  // No text controllers - places arrive only from the search page, so
-  // there is no typed text that could drift out of step with the
-  // coordinates behind it. Same reasoning as journey_screen.dart.
   PlaceSuggestion? _fromPlace;
   PlaceSuggestion? _toPlace;
   String _dayType = 'weekday';
+
+  @override
+  void initState() {
+    super.initState();
+    _fromPlace = widget.initialFrom;
+    _toPlace = widget.initialTo;
+    if (_fromPlace != null && _toPlace != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _compare());
+    }
+  }
 
   void _compare() {
     // The button is disabled until both are chosen, so this is just belt
@@ -102,7 +112,12 @@ class _ByHourScreenState extends ConsumerState<ByHourScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('When should I travel?')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+        padding: const EdgeInsets.fromLTRB(
+          WimbSpace.screen,
+          4,
+          WimbSpace.screen,
+          32,
+        ),
         children: [
           Card(
             clipBehavior: Clip.antiAlias,
@@ -115,7 +130,7 @@ class _ByHourScreenState extends ConsumerState<ByHourScreen> {
                   iconColor: WimbColors.delhiGreen,
                   onPicked: (place) => setState(() => _fromPlace = place),
                 ),
-                const Divider(height: 1, indent: 48),
+                const Divider(height: 1, indent: 52),
                 PlacePickerRow(
                   label: 'TO',
                   place: _toPlace,
@@ -126,9 +141,10 @@ class _ByHourScreenState extends ConsumerState<ByHourScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
-          // A pill pair, sized to the thumb.
+          // A pill pair, sized to the thumb. It is the only choice on the
+          // screen, so it gets its own full row.
           SegmentedButton<String>(
             segments: const [
               ButtonSegment(value: 'weekday', label: Text('Weekday')),
@@ -136,12 +152,13 @@ class _ByHourScreenState extends ConsumerState<ByHourScreen> {
             ],
             selected: {_dayType},
             showSelectedIcon: false,
-            onSelectionChanged: (selection) => setState(() => _dayType = selection.first),
+            onSelectionChanged: (selection) =>
+                setState(() => _dayType = selection.first),
             style: ButtonStyle(
               backgroundColor: WidgetStateProperty.resolveWith(
                 (states) => states.contains(WidgetState.selected)
                     ? WimbColors.dtcRed
-                    : WimbColors.cardCream,
+                    : WimbColors.surfaceMuted,
               ),
               foregroundColor: WidgetStateProperty.resolveWith(
                 (states) => states.contains(WidgetState.selected)
@@ -149,17 +166,22 @@ class _ByHourScreenState extends ConsumerState<ByHourScreen> {
                     : WimbColors.inkMuted,
               ),
               side: const WidgetStatePropertyAll(BorderSide.none),
-              padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 15)),
+              padding: const WidgetStatePropertyAll(
+                EdgeInsets.symmetric(vertical: 15),
+              ),
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           FilledButton(
             onPressed: canCompare ? _compare : null,
             child: const Text('Compare hours'),
           ),
           const SizedBox(height: 24),
-          if (query == null) _emptyState(context) else _ResultsArea(query: query),
+          if (query == null)
+            _emptyState(context)
+          else
+            _ResultsArea(query: query),
         ],
       ),
     );
@@ -168,27 +190,13 @@ class _ByHourScreenState extends ConsumerState<ByHourScreen> {
   /// Explains what this screen is for before anything has been compared -
   /// and why no other bus app can answer it.
   Widget _emptyState(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 22),
-      child: Column(
-        children: [
-          Icon(Icons.schedule, size: 44, color: WimbColors.hairline),
-          const SizedBox(height: 14),
-          Text(
-            'Is it faster to leave later?',
-            style: Theme.of(context).textTheme.titleLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'The same trip is costed for every hour buses run, using how '
-            'often they were actually observed - not a published timetable, '
-            'which could never tell you this.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
-      ),
+    return const EmptyState(
+      icon: Icons.schedule,
+      title: 'Is it faster to leave later?',
+      body:
+          'The same trip is costed for every hour buses run, using how '
+          'often they were actually observed - not a published timetable, '
+          'which could never tell you this.',
     );
   }
 }
@@ -217,7 +225,9 @@ class _ResultsArea extends ConsumerWidget {
       ),
       data: (byHour) {
         if (!byHour.available) {
-          return ErrorCard(message: byHour.unavailableReason ?? 'No route found.');
+          return ErrorCard(
+            message: byHour.unavailableReason ?? 'No route found.',
+          );
         }
         // The bars are drawn relative to the slowest costed hour, so the
         // longest bar fills the row and every other hour is read against
@@ -229,38 +239,70 @@ class _ResultsArea extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: WimbColors.surfaceMuted,
+                borderRadius: BorderRadius.circular(WimbRadius.field),
+              ),
               child: Row(
                 children: [
-                  const Icon(Icons.trip_origin, size: 14, color: WimbColors.delhiGreen),
-                  const SizedBox(width: 6),
+                  const Icon(
+                    Icons.trip_origin,
+                    size: 17,
+                    color: WimbColors.delhiGreen,
+                  ),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      '${query.fromName}  →  ${query.toName}',
-                      style: Theme.of(context).textTheme.titleMedium,
+                      '${query.fromName}  to  ${query.toName}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: WimbColors.ink,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 16),
 
             // The headline answer, before the detail.
             Card(
               color: WimbColors.delhiGreenLight,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(WimbRadius.card),
+                side: BorderSide.none,
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.lightbulb_outline, color: WimbColors.delhiGreen, size: 21),
-                    const SizedBox(width: 11),
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: const BoxDecoration(
+                        color: WimbColors.cardCream,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.lightbulb_outline,
+                        color: WimbColors.delhiGreen,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         byHour.advice,
                         style: const TextStyle(
-                          fontSize: 15,
-                          height: 1.35,
+                          fontSize: 14.5,
+                          height: 1.4,
                           fontWeight: FontWeight.w600,
                           color: WimbColors.ink,
                         ),
@@ -271,26 +313,30 @@ class _ResultsArea extends ConsumerWidget {
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 22),
             const SectionLabel('Hour by hour'),
             Card(
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
                 child: Column(
                   children: [
                     for (final hour in byHour.hours)
                       _HourRow(
                         hour: hour,
                         slowestMinutes: slowest,
-                        isBest: byHour.best != null && hour.hourOfDay == byHour.best!.hourOfDay,
-                        isWorst: byHour.worst != null && hour.hourOfDay == byHour.worst!.hourOfDay,
+                        isBest:
+                            byHour.best != null &&
+                            hour.hourOfDay == byHour.best!.hourOfDay,
+                        isWorst:
+                            byHour.worst != null &&
+                            hour.hourOfDay == byHour.worst!.hourOfDay,
                       ),
                   ],
                 ),
               ),
             ),
 
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             ...byHour.caveats.map((c) => CaveatLine(c)),
           ],
         );
@@ -325,8 +371,8 @@ class _HourRow extends StatelessWidget {
   /// colouring all eighteen would leave nothing standing out.
   Color get _barColor {
     if (isBest) return WimbColors.delhiGreen;
-    if (isWorst) return WimbColors.trustLow;
-    return WimbColors.dtcRed.withValues(alpha: 0.45);
+    if (isWorst) return WimbColors.statusStale;
+    return WimbColors.dtcRed.withValues(alpha: 0.35);
   }
 
   @override
@@ -336,26 +382,22 @@ class _HourRow extends StatelessWidget {
     final emphasised = isBest || isWorst;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
-            // Wide enough for "05:00" without wrapping. It was 44 and the
-            // label broke onto a second line as "05:0 / 0", which looked
-            // broken - the width has to fit the text, not the other way
-            // round, so maxLines below makes that impossible to miss again.
-            width: 52,
+            // Wide enough for "05:00" without wrapping.
+            width: 54,
             child: Text(
               label,
               maxLines: 1,
               style: TextStyle(
                 // Tabular figures so every hour is the same width and the
-                // bars all start on one clean vertical line - what a
-                // monospace font would have been used for.
+                // bars all start on one clean vertical line.
                 fontFeatures: WimbFonts.tabular,
-                fontSize: 13,
-                fontWeight: emphasised ? FontWeight.w700 : FontWeight.w400,
+                fontSize: 13.5,
+                fontWeight: emphasised ? FontWeight.w700 : FontWeight.w500,
                 color: emphasised ? WimbColors.ink : WimbColors.inkMuted,
               ),
             ),
@@ -365,9 +407,9 @@ class _HourRow extends StatelessWidget {
                 ? Text(
                     'no data for this hour',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontStyle: FontStyle.italic,
-                          color: WimbColors.inkMuted.withValues(alpha: 0.65),
-                        ),
+                      fontStyle: FontStyle.italic,
+                      color: WimbColors.inkMuted.withValues(alpha: 0.65),
+                    ),
                   )
                 : _bar(context),
           ),
@@ -379,7 +421,9 @@ class _HourRow extends StatelessWidget {
   Widget _bar(BuildContext context) {
     final minutes = hour.totalMinutes!;
     // Guard against a divide-by-zero if every hour somehow costed 0.
-    final fraction = slowestMinutes > 0 ? (minutes / slowestMinutes).clamp(0.05, 1.0) : 1.0;
+    final fraction = slowestMinutes > 0
+        ? (minutes / slowestMinutes).clamp(0.05, 1.0)
+        : 1.0;
 
     return Row(
       children: [
@@ -389,53 +433,54 @@ class _HourRow extends StatelessWidget {
               // The track behind the bar, so short bars still read as
               // "short compared to the day" rather than floating in space.
               Container(
-                height: 20,
+                height: 22,
                 decoration: BoxDecoration(
-                  color: WimbColors.hairline.withValues(alpha: 0.45),
-                  borderRadius: BorderRadius.circular(4),
+                  color: WimbColors.surfaceMuted,
+                  borderRadius: BorderRadius.circular(7),
                 ),
               ),
               FractionallySizedBox(
                 widthFactor: fraction,
                 child: Container(
-                  height: 20,
+                  height: 22,
                   decoration: BoxDecoration(
                     color: _barColor,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(7),
                   ),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(width: 9),
+        const SizedBox(width: 10),
         SizedBox(
-          width: 46,
+          width: 50,
           child: Text(
             '${minutes.round()}m',
             textAlign: TextAlign.right,
             style: TextStyle(
               fontFeatures: WimbFonts.tabular,
-              fontSize: 13,
-              fontWeight: isBest || isWorst ? FontWeight.w700 : FontWeight.w400,
+              fontSize: 13.5,
+              fontWeight: isBest || isWorst ? FontWeight.w700 : FontWeight.w500,
               color: isBest
                   ? WimbColors.delhiGreen
                   : isWorst
-                      ? WimbColors.trustLow
-                      : WimbColors.ink,
+                  ? WimbColors.statusStale
+                  : WimbColors.ink,
             ),
           ),
         ),
-        // The confidence dot stays, but small - the bar is what carries
-        // the comparison, and five full trust dots on every row would
-        // drown it.
-        const SizedBox(width: 7),
+        // The confidence dot stays small - the bar is what carries the
+        // comparison, and a row of dots on every row would drown it.
+        const SizedBox(width: 8),
         Container(
-          width: 7,
-          height: 7,
+          width: 8,
+          height: 8,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: trustColor(hour.confidenceLevel ?? ''),
+            color: hour.confidenceLevel == null
+                ? WimbColors.inkFaint
+                : WimbColors.statusHistorical,
           ),
         ),
       ],

@@ -1,4 +1,4 @@
-# Where Is My Bus — Delhi
+# Where Is My Bus
 
 Project context. This describes *what* is being built and *why*.
 It deliberately does not prescribe *how* — the developer is working the
@@ -9,104 +9,79 @@ talk about it, see [RULES.md](RULES.md).
 
 ## 1. What this is
 
-A bus tracking app for Delhi that tells a commuter standing at a stop:
-**which buses are coming to this stop, and when — with an honest statement
-of how much that number can be trusted.**
+A fault-tolerant bus tracking and transit planning architecture with an
+offline-capable static layer: **Where Is My Bus**, referencing the commuter-first
+philosophy of **Where Is My Train**.
 
-The framing that matters:
+The core principles adapted from Where Is My Train for urban bus transit:
+1. **Offline-First, for the layer that can be offline**: routes, stops, ordered
+   stop sequences and direct-bus lookups operate locally on-device (via SQLite)
+   with zero internet connectivity. Timetables, arrival times and journey
+   planning need the API, and live bus positions always need the network — an
+   offline phone has no way to learn where a bus is. The app says which of the
+   two it is answering from instead of blurring them.
+2. **Crowdsourced Telemetry Imputation**: When official feeds drop, lag, or fail to
+   list active buses ("ghost buses"), passengers traveling on board transmit GPS
+   beacons to keep the bus visible for waiting commuters.
+3. **Graceful Degradation**: Continuous service dynamically stepping down across
+   fallback tiers (Live GPS -> Crowdsourced Telemetry -> Historical Statistics -> Static Timetable)
+   instead of vanishing.
+4. **Probabilistic Arrival Intervals**: Providing commuters with calibrated arrival time windows
+   (e.g., 8–12 min) with explicit data provenance indicators, rather than brittle single-point ETAs.
 
-> This is not a tracker for a city with no tracking.
-> It is an honesty and gap-fill layer over a feed that lies.
-
-Delhi already has bus tracking. It is unreliable, and every existing app
-presents its output as if it were certain. That gap is the project.
+### The Role of Delhi Transit Data (The Testbed)
+Delhi was chosen as the **reference implementation and empirical testbed** because
+the Delhi Open Transit Data (OTD) initiative provides open static GTFS and 10-second
+GTFS-Realtime feeds across 7,300+ buses. It provides a real-world testing ground
+with characteristic municipal feed anomalies: 30–50% empty responses, hardcoded 0-speed metrics,
+static schedules assuming idealized constant speeds, and unlisted fleets.
 
 ---
 
-## 2. The problem, verified
+## 2. The Technical Challenge: Real-World Municipal Telemetry
 
-Delhi is not short of transit data:
+Modern municipal bus transit produces massive telemetry streams, but raw feeds present major systemic challenges:
 
-- Every DTC bus carries an AIS-140 certified GPS unit (VLTD), CCTV and a panic button.
-- The **Open Transit Data (OTD)** portal (`otd.delhi.gov.in`), built by IIIT-Delhi
-  with DIMTS, has published static GTFS and GTFS-Realtime since November 2018.
-  Vehicle positions refresh **every 10 seconds**.
-- The official **One Delhi** app tracks 7,300+ DTC and cluster buses across
-  ~500 routes. It is rated **1.6 / 5**.
-- Google Maps, Chartr and others consume the same feed.
+1. **Telemetry dropouts & outages**: Hardware GPS units go offline or drop packets, causing active vehicles to disappear from tracking maps.
+2. **Unlisted fleets & unscheduled trips**: New feeder fleets or dynamically added trips lack entries in static schedule feeds.
+3. **Static schedule discrepancies**: Published timetables (e.g., in GTFS `stop_times.txt`) typically assume idealized constant travel velocities without accounting for real-world traffic congestion.
+4. **Missing sensor attributes**: Realtime feeds frequently omit speed and bearing metrics or hardcode them to 0, requiring velocity and heading to be derived algorithmically from sequential spatial sightings.
+5. **Feed response volatility**: Upstream cache invalidation or server regeneration can cause intermittent empty payloads (0 vehicles returned) even during peak fleet operations.
+6. **Brittle point-estimate ETAs**: Oversimplified single-point arrival times fail to reflect stochastic urban traffic variance and dwell times.
 
-Yet a commuter at a Delhi bus stop still cannot reliably know when the next
-bus arrives. The documented failure modes:
-
-1. **GPS units go offline.** The bus vanishes from the map entirely.
-2. **Ghost buses.** New e-buses, including the DEVI fleet, have registration
-   numbers never added to the system, with user tickets unresolved for months.
-   These buses physically run but are invisible in the feed.
-3. **Stale static data.** Routes change without GTFS being updated.
-4. **The published timetable is fabricated.** OTD's own documentation states:
-   > "The arrival and departure times of buses as mentioned in stop_times.txt
-   > is not accurate and is a rough estimate generated by assuming a constant
-   > speed of travel."
-5. **DEVI buses stop at unmarked points**, so there is no stop to attach an ETA to.
-6. **ETAs are wrong and presented as certain.** A single number, no range,
-   no indication of its source.
-
-### Facts about the data source
+### Data Source Facts (Delhi Testbed)
 
 - **OTD publishes `VehiclePositions.pb` only. There is no `TripUpdates` feed.**
-  No official ETA exists anywhere in Delhi's open data — every app computes
-  its own from raw positions. So the prediction layer is the core
-  contribution of this project, not a re-skin of something already solved.
-- The static file list in OTD's docs is `agency, calendar, stops, routes,
-  trips, stop_times`, but **`shapes.txt` is included in practice** — verified
-  in the actual zip, 770,824 points across 2,648 shapes, fully populated
-  `shape_dist_traveled` in real metres. See `docs/static-feed-profile.md`.
-- **The realtime feed carries both `trip_id` and `route_id`** — verified
-  against real recorded frames. `trip_id` follows `route_id_HH_MM`, matching
-  the static feed's own trip-naming pattern exactly.
-- **The realtime feed lies about being empty, often.** Roughly 30–50% of
-  successful (HTTP 200, non-empty-body) fetches decode to a genuinely valid
-  but zero-vehicle `FeedMessage` — a real ~35-byte response from OTD's
-  server, not a recorder bug or truncation. Chronic from the third minute of
-  recording onward, on every day recorded so far. The fleet count has been
-  observed swinging from 0 to ~5,600 vehicles and back within a single 10s
-  tick either side of an empty frame — almost certainly a server-side
-  caching/regeneration artifact, not real buses vanishing. Any code reading
-  this archive must treat `vehicle_count = 0` as "the feed said nothing this
-  tick," never as "zero buses are running." See `docs/realtime-feed-profile.md`.
-- **`position.speed` is present on every vehicle but is always exactly 0** —
-  verified across 243,118 sampled rows, zero non-zero readings. `bearing` is
-  never present at all. Neither field carries real information from this
-  feed; real speed/heading has to be derived from position deltas between
-  consecutive frames of the same vehicle (Phase 2 territory).
-- A large share of vehicles report `schedule_relationship = ADDED` rather
-  than `SCHEDULED` — meaning the trip does not exist in the static schedule
-  at all. Any join from realtime `trip_id` back to the static `trips` table
-  will silently drop these rows unless that's accounted for.
+  No precomputed ETA exists in the open data — the prediction and journey planning
+  layers are designed and engineered from raw positions from the ground up.
+- The static GTFS includes full route linestrings in `shapes.txt` (770,824 points
+  across 2,648 shapes, with populated `shape_dist_traveled` in meters).
+- **The realtime feed carries both `trip_id` and `route_id`**, following
+  predictable naming patterns aligned with static identifiers.
+- **Upstream responses periodically return empty vehicle payloads** (~30–50%
+  of HTTP 200 responses contain zero records during cache rebuilds). The
+  ingestion pipeline treats `vehicle_count = 0` as a silent tick rather than
+  an empty fleet.
+- **`position.speed` is hardcoded to 0 and `bearing` is omitted**, necessitating
+  sequential spatial delta calculation to determine velocity and heading.
+- A significant share of vehicles report `schedule_relationship = ADDED`,
+  confirming that live operations frequently diverge from static schedules.
 
 ---
 
-## 3. What already exists, and how we differ
+## 3. Core Architectural Contributions
 
-**One Delhi** (built by DIMTS with the Transport Department, DDC Delhi,
-IIIT-Delhi and DTC) offers: live positions on a map, ETA, nearest stop,
-route search, route visualiser. Its ETA comes from a machine learning model
-using GPS position, live traffic and historical data — whose accuracy nobody
-publishes, and whose output the user receives as one unqualified number.
+Rather than a simple consumer of transit APIs, **Where Is My Bus** is engineered as an autonomous, fault-tolerant transit tracking architecture:
 
-The goal is not to beat their model. The differences are:
+1. **Probabilistic Arrival Ranges**: Calibrated confidence windows reflecting empirical travel time distributions, paired with explicit data provenance indicators.
+2. **Dynamic Graceful Degradation**: Multi-tier operational resilience stepping down smoothly across fallback tiers (Live GPS -> Crowdsourced Telemetry -> Historical Segment Statistics -> Static Timetable) during feed or network outages.
+3. **Crowdsourced Telemetry Imputation**: An opportunistic passenger beaconing architecture ("I'm on this bus") that maintains visibility for untracked or unlisted vehicles.
+4. **Spatial Map-Matching Pipeline**: High-throughput PostGIS projection mapping noisy GPS coordinates to underlying route shape linestrings, handling lap boundaries and heading ambiguities.
+5. **Offline-First Transit Mobility**: An on-device SQLite pack (12.2 MB, three tables: routes, places, ordered route stops) supporting stop search, route search, ordered stop sequences and direct-bus lookups with zero cellular connectivity. Ranked multi-leg journey planning, every timetable answer and every live tier need the network. This is the static skeleton of the network, not a tracking source, and the boundary is stated in the app rather than glossed over.
+6. **Empirically Evaluated Travel Time Modeling**: Statistically robust hop passage extraction and 7-fold cross-validation with day-type (weekday/weekend) stratification.
+7. **Verifiable Location Provenance (simulated)**: Every bus position can carry a location proof that follows the paper's protocol exactly: Algorithm 1 selects the nearest satellite on each of the four sides of the point of interest, Algorithm 2 turns signed, encrypted round-trip exchanges into ranges (`Rad = C(T_Y−T_X)/(2Nλ)`) and solves the four sphere equations (1)-(4), and Algorithm 3 recomputes the satellite-to-POI distances with equation (11). The same machinery selects the relay vehicle (`D_min` over verified vehicles only), which is the paper's actual security goal. Adapted from Paul, Dhal and Mary, *Relaying Vehicle Selection Protocol for a Road Intersection*, IEEE/ACM TON 32(3), 2024.
 
-1. **We admit uncertainty.** A range plus the source of the estimate, not a
-   bare number.
-2. **We degrade instead of disappearing.** When GPS drops, One Delhi shows
-   nothing.
-3. **We surface ghost buses.** Scheduled trips with no live vehicle get
-   reported rather than silently omitted.
-4. **We warn about bunching.** The raw data supports it; no app shows it.
-5. **We work offline.**
-6. **We are accountable.** We measure our own error and publish the number.
-
-All six are achievable from the public OTD feed alone, with zero users.
+The first six are achievable from the public OTD feed alone, with zero users. The seventh is a designed protocol demonstration: the four satellites and their timestamps are simulated because there is no receiver hardware or satellite link, while the signatures, encryption and checks are real; that is always labelled in the API responses and docs (see `docs/location-proof.md`). The app does not display proofs - it focuses on bus tracking.
 
 ---
 
@@ -115,19 +90,16 @@ All six are achievable from the public OTD feed alone, with zero users.
 Priority order.
 
 1. **Buses arriving at this stop, with ETA** — the primary screen
-2. **Confidence-banded arrival times** — a range when uncertain, never a
-   single misleading number
-3. **Graceful degradation** — Live → Estimated → Timetable as data quality
-   drops. Never show a stale position as live
-4. **Trust indicator** — shows whether a time came from a live bus, an
-   extrapolated estimate, or the timetable alone
+2. **Confidence-banded arrival times** — an empirical arrival interval reflecting real-world traffic variance
+3. **Graceful degradation** — Live → Estimated → Timetable as data quality drops
+4. **Data provenance indicator** — indicates data tier (live GPS, crowdsourced ping, historical average, or timetable)
 5. **Route and schedule information** — route lists, stop sequences, timetables
 6. **Buses between stops** — all buses running between any two stops
-7. **Offline capability** — routes, stops, timetables and search work with
-   no network
+7. **Offline capability (static layer only)** — routes, stops, ordered stop sequences and search work with no network; timetables, ETAs, journey planning and live positions do not
 8. **Delay and bunching alerts**
 9. **Arrival alarms** — notify when approaching the destination stop
 10. **Ghost bus reporting** — scheduled-but-untracked trips made visible
+11. **GPS location proof — backend/API only** — the API attaches the paper's four-satellite proof to every bus position: Algorithm 1 picks the nearest satellite on the East, West, North and South sides of the point of interest; Algorithm 2 exchanges fresh random values, encrypted replies and signed Info, turns round trips into `Rad` and solves the four sphere equations (1)-(4); Algorithm 3 reports the equation (11) check. Relay-vehicle selection (nearest verified bus to the POI) is included, since that is the paper's actual goal. Simulated satellites/timestamps, real signatures, encryption and checks. Deliberately not shown in the app: the app's main feature is the bus tracking/ride screen. See `docs/location-proof.md`.
 
 ### Deliberately cut or downgraded
 
@@ -139,6 +111,14 @@ Priority order.
   riders on one bus.
 - **Passenger-sourced positioning** — built and demonstrated, but presented
   as a designed contribution rather than a validated one. See constraints.
+- **Real satellite verification** — DOWNGRADED to a simulated proof. There is
+  no receiver hardware and no satellite link, so the satellite observables in
+  a location proof are generated for the demo. The verification code, the
+  attack faults and the measured false-accept/false-reject rates are real.
+- **Proof screens in the app** — CUT deliberately at the user's request. The
+  proof stays a backend/API contribution (`proof` on arrivals,
+  `/location-proof`, `/relay-selection`); the rider's app focuses on bus
+  tracking, with the ride/tracking screen as its main feature.
 
 ---
 
@@ -154,9 +134,7 @@ This is why the project is designed around the public feed first and
 crowdsourcing second. The feed-based system is fully buildable and verifiable
 from a laptop anywhere.
 
-Crowdsourcing is presented honestly as designed-and-simulated, not proven.
-That framing is stronger than overclaiming — and it mirrors what the app
-itself does.
+Crowdsourcing is presented as an engineered architecture and simulated imputation pipeline.
 
 ---
 
@@ -228,8 +206,17 @@ Build in this order. **The app is last, not first.**
   8-day archive next (`scripts/run-full-pipeline.sh`).
 - **Phase 3 — Historical travel times.** Derive them from the archive.
 - **Phase 4 — ETA + evaluation.** The milestone that de-risks the project.
-- **Phase 5 — API.**
-- **Phase 6 — Flutter app.**
+- **Phase 5 — API. In progress.** The original ETA/journey/route endpoints are
+  live. The stop-board read layer (`/feed/status`, `/stops/:id/arrivals`,
+  `/routes/:id/detail`) is added, with replay from matched stop passages. The
+  location-proof layer (`proof` on every arrival, `/location-proof`,
+  `/relay-selection`) lives entirely in the API; the app does not render it.
+- **Phase 6 — Flutter app. In progress.** The stop board and the
+  tracking/ride screen (the app's main feature: follow the bus on a map with
+  direction, next stop, arrival window, progress, full-screen map, view-route,
+  alarm and share) are built, along with the plan and saved screens and a
+  three-tab shell; see `docs/ui-redesign.md`. Plan results, saved stops,
+  offline frequency and the replay speed control are next.
 
 ### Phase 0 is the only irreversible deadline
 
@@ -266,6 +253,16 @@ plain language alongside the code, so the developer can still understand and
 defend it. Trade-offs should still be talked through, not just silently
 decided.
 
+### Project map
+
+`.ua/knowledge-graph.json` is a generated map of this repo — code, SQL, docs
+and config in one graph, with layers and a guided tour that follows the real
+build order. Read it to orient before exploring the tree.
+
+It is derived data, never edit it by hand. Regenerate it with the
+`understand` skill after a batch of changes; runs after the first are
+incremental and only re-analyse what changed.
+
 ---
 
 ## 9. Sources
@@ -293,8 +290,4 @@ gitignored (151 MB `stop_times.txt` alone exceeds GitHub's limit).
 - Open Transit Data Delhi — <https://otd.delhi.gov.in/documentation>
 - OTD static data — <https://otd.delhi.gov.in/data/static>
 - OTD realtime data — <https://otd.delhi.gov.in/data/realtime>
-- DDC Delhi, One Delhi App — <https://ddc.delhi.gov.in/our-work/6/one-delhi-app>
 - DIMTS, AIS-140 based tracking — <https://www.dimts.in/ais-based-tracking.aspx>
-- Swarajya, "Delhi Has The Buses, The Data, And The Apps. Why Can't You Still
-  Find Your Bus?" —
-  <https://swarajyamag.com/reports/delhi-has-the-buses-the-data-and-the-apps-why-cant-you-still-find-your-bus>

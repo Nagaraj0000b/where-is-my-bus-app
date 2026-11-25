@@ -20,8 +20,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'api_client.dart';
+import 'offline_transit_pack.dart'
+    if (dart.library.html) 'offline_transit_pack_web.dart';
 import 'theme.dart';
 
 /// Waits this long after the last keystroke before asking the backend, so
@@ -46,6 +49,16 @@ class PlacePickerRow extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
 
+  /// When non-null, restricts search and recommendations strictly to valid
+  /// destinations directly connected to this starting stop by bus.
+  final String? directFromStop;
+
+  /// Optional custom tap action (e.g. to guide user when From stop is not yet picked).
+  final VoidCallback? onCustomTap;
+
+  /// Optional subtitle hint displayed below the stop name.
+  final String? subtitle;
+
   const PlacePickerRow({
     super.key,
     required this.label,
@@ -53,11 +66,21 @@ class PlacePickerRow extends StatelessWidget {
     required this.onPicked,
     required this.icon,
     required this.iconColor,
+    this.directFromStop,
+    this.onCustomTap,
+    this.subtitle,
   });
 
   Future<void> _openSearch(BuildContext context) async {
+    if (onCustomTap != null) {
+      onCustomTap!();
+      return;
+    }
     final picked = await Navigator.of(context).push<PlaceSuggestion>(
-      MaterialPageRoute(builder: (_) => PlaceSearchPage(title: label)),
+      MaterialPageRoute(
+        builder: (_) =>
+            PlaceSearchPage(title: label, directFromStop: directFromStop),
+      ),
     );
     if (picked != null) onPicked(picked);
   }
@@ -68,38 +91,76 @@ class PlacePickerRow extends StatelessWidget {
 
     return InkWell(
       onTap: () => _openSearch(context),
-      borderRadius: BorderRadius.circular(14),
       child: Padding(
-        // Still a comfortable thumb target (well over ~48dp with both
-        // lines), just not the oversized block it was on a narrow screen.
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            Icon(icon, size: 17, color: iconColor),
-            const SizedBox(width: 12),
+            // A tinted square behind the icon, rather than a bare glyph:
+            // on a white card this is what tells the eye the whole row is
+            // one control.
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: Icon(icon, size: 19, color: iconColor),
+            ),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.8,
-                      color: WimbColors.inkMuted,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1,
+                          color: WimbColors.inkMuted,
+                        ),
+                      ),
+                      if (directFromStop != null) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: WimbColors.delhiGreen.withValues(
+                              alpha: 0.12,
+                            ),
+                            borderRadius: BorderRadius.circular(
+                              WimbRadius.pill,
+                            ),
+                          ),
+                          child: const Text(
+                            'DIRECT ONLY',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                              color: WimbColors.delhiGreen,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                  const SizedBox(height: 1),
+                  const SizedBox(height: 2),
                   Text(
-                    chosen ? place!.stopName : 'Choose a place',
+                    chosen ? place!.stopName : (subtitle ?? 'Choose a place'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 16,
                       fontWeight: chosen ? FontWeight.w600 : FontWeight.w400,
-                      color: chosen ? WimbColors.ink : WimbColors.inkMuted.withValues(alpha: 0.65),
+                      color: chosen ? WimbColors.ink : WimbColors.inkFaint,
                     ),
                   ),
                 ],
@@ -114,22 +175,37 @@ class PlacePickerRow extends StatelessWidget {
 
 /// A full-screen place search. Opens with the keyboard up, results fill
 /// the rest of the screen, and picking one pops the page returning it.
-class PlaceSearchPage extends StatefulWidget {
+class PlaceSearchPage extends ConsumerStatefulWidget {
   /// 'From' or 'To' - only used to title the page.
   final String title;
 
-  const PlaceSearchPage({super.key, required this.title});
+  /// When non-null, restricts search and recommendations strictly to valid
+  /// destinations directly connected to this starting stop by bus.
+  final String? directFromStop;
+
+  const PlaceSearchPage({super.key, required this.title, this.directFromStop});
 
   @override
-  State<PlaceSearchPage> createState() => _PlaceSearchPageState();
+  ConsumerState<PlaceSearchPage> createState() => _PlaceSearchPageState();
 }
 
-class _PlaceSearchPageState extends State<PlaceSearchPage> {
+class _PlaceSearchPageState extends ConsumerState<PlaceSearchPage> {
   final _controller = TextEditingController();
   Timer? _debounce;
   List<PlaceSuggestion> _results = [];
+  List<DirectDestinationSuggestion> _directDestinations = [];
   bool _searching = false;
   bool _hasTyped = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.directFromStop != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadDirectDestinations('');
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -138,8 +214,40 @@ class _PlaceSearchPageState extends State<PlaceSearchPage> {
     super.dispose();
   }
 
+  Future<void> _loadDirectDestinations(String query) async {
+    if (!mounted) return;
+    setState(() => _searching = true);
+
+    try {
+      final pack = ref.read(offlineTransitPackProvider);
+      final dests = await pack.findDirectDestinations(
+        widget.directFromStop!,
+        query: query,
+        limit: 60,
+      );
+      if (mounted) {
+        setState(() {
+          _directDestinations = dests;
+          _searching = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _searching = false);
+    }
+  }
+
   void _onChanged(String text) {
     _debounce?.cancel();
+
+    if (widget.directFromStop != null) {
+      setState(() {
+        _hasTyped = text.trim().isNotEmpty;
+      });
+      _debounce = Timer(_debounceDelay, () {
+        _loadDirectDestinations(text.trim());
+      });
+      return;
+    }
 
     if (text.trim().length < 2) {
       setState(() {
@@ -167,49 +275,75 @@ class _PlaceSearchPageState extends State<PlaceSearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDirectMode = widget.directFromStop != null;
+
     return Scaffold(
       backgroundColor: WimbColors.cream,
       appBar: AppBar(
-        title: Text(widget.title),
-        // The search box lives in the app bar itself, so the results get
-        // the entire screen below it.
+        title: Text(isDirectMode ? 'Direct Destinations' : widget.title),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(62),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: TextField(
-              controller: _controller,
-              // The whole point of a dedicated search page: the keyboard
-              // is already up, so there is no extra tap before typing.
-              autofocus: true,
-              textInputAction: TextInputAction.search,
-              onChanged: _onChanged,
-              style: const TextStyle(fontSize: 16),
-              decoration: InputDecoration(
-                hintText: 'Search stops and places',
-                filled: true,
-                fillColor: Colors.white,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-                prefixIcon: const Icon(Icons.search, color: WimbColors.inkMuted, size: 21),
-                suffixIcon: _clearOrSpinner(),
-                // No visible outline at all - a filled pill reads as a
-                // search bar on a phone, where an outlined box with a
-                // floating label reads as a form field on a web page.
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+          preferredSize: Size.fromHeight(isDirectMode ? 104 : 70),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  WimbSpace.screen,
+                  0,
+                  WimbSpace.screen,
+                  12,
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+                child: TextField(
+                  controller: _controller,
+                  autofocus: true,
+                  textInputAction: TextInputAction.search,
+                  onChanged: _onChanged,
+                  style: const TextStyle(fontSize: 16),
+                  decoration: InputDecoration(
+                    hintText: isDirectMode
+                        ? 'Filter direct destinations...'
+                        : 'Search stops and places',
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: WimbColors.inkMuted,
+                      size: 22,
+                    ),
+                    suffixIcon: _clearOrSpinner(),
+                  ),
                 ),
               ),
-            ),
+              if (isDirectMode)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    WimbSpace.screen,
+                    0,
+                    WimbSpace.screen,
+                    10,
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.check_circle_outline,
+                        size: 15,
+                        color: WimbColors.delhiGreen,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Showing valid stops reachable from ${widget.directFromStop}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: WimbColors.delhiGreen,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
         ),
       ),
@@ -238,9 +372,181 @@ class _PlaceSearchPageState extends State<PlaceSearchPage> {
     );
   }
 
+  static const _popularPlaces = [
+    PlaceSuggestion(
+      stopName: 'Shivaji Stadium Terminal',
+      lat: 28.6315,
+      lon: 77.2167,
+    ),
+    PlaceSuggestion(stopName: 'AIIMS Ring Road', lat: 28.5684, lon: 77.2084),
+    PlaceSuggestion(
+      stopName: 'Nehru Place Terminal',
+      lat: 28.5521,
+      lon: 77.2415,
+    ),
+    PlaceSuggestion(stopName: 'ISBT Kashmiri Gate', lat: 28.6675, lon: 77.2312),
+    PlaceSuggestion(
+      stopName: 'ISBT Anand Vihar Terminal',
+      lat: 28.6475,
+      lon: 77.3158,
+    ),
+    PlaceSuggestion(stopName: 'Dhaula Kuan', lat: 28.5925, lon: 77.1633),
+    PlaceSuggestion(
+      stopName: 'New Delhi Railway Station Gate 2',
+      lat: 28.6430,
+      lon: 77.2195,
+    ),
+    PlaceSuggestion(
+      stopName: 'Mayur Vihar Phase-1',
+      lat: 28.6083,
+      lon: 77.2947,
+    ),
+    PlaceSuggestion(
+      stopName: 'Saket Metro Station / Max Hospital',
+      lat: 28.5204,
+      lon: 77.2014,
+    ),
+    PlaceSuggestion(
+      stopName: 'Dwarka Sector 10 Metro Station',
+      lat: 28.5812,
+      lon: 77.0583,
+    ),
+  ];
+
   Widget _body() {
+    if (widget.directFromStop != null) {
+      return _directDestinationsBody();
+    }
+    return _standardPlaceSearchBody();
+  }
+
+  Widget _directDestinationsBody() {
+    if (_directDestinations.isEmpty && !_searching) {
+      final query = _controller.text.trim();
+      return EmptyState(
+        icon: Icons.alt_route,
+        title: query.isEmpty
+            ? 'No direct destinations found'
+            : 'No direct bus to "$query"',
+        body: query.isEmpty
+            ? 'No direct bus routes originate from ${widget.directFromStop}.'
+            : 'There is no direct single-bus route connecting ${widget.directFromStop} to "$query". '
+                  'Use the Journey Planner to view 1-change connecting trips.',
+      );
+    }
+
+    return ListView.separated(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.only(top: 6, bottom: 28),
+      itemCount: _directDestinations.length,
+      separatorBuilder: (_, _) =>
+          const Divider(height: 1, indent: 78, endIndent: WimbSpace.screen),
+      itemBuilder: (context, i) {
+        final dest = _directDestinations[i];
+        final sampleRoutes = dest.routeNames.take(3).join(', ');
+        final hasMore = dest.routeNames.length > 3;
+
+        return ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: WimbSpace.screen,
+            vertical: 8,
+          ),
+          leading: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: WimbColors.delhiGreen.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.directions_bus,
+              size: 21,
+              color: WimbColors.delhiGreen,
+            ),
+          ),
+          title: Text(
+            dest.stopName,
+            style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600),
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Text(
+              '${dest.directRoutesCount} direct ${dest.directRoutesCount == 1 ? 'route' : 'routes'} ($sampleRoutes${hasMore ? '...' : ''})',
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: WimbColors.inkMuted,
+              ),
+            ),
+          ),
+          trailing: const Icon(
+            Icons.chevron_right,
+            size: 20,
+            color: WimbColors.inkFaint,
+          ),
+          onTap: () => Navigator.of(context).pop(dest.toPlaceSuggestion()),
+        );
+      },
+    );
+  }
+
+  Widget _standardPlaceSearchBody() {
     if (!_hasTyped) {
-      return _hint('Start typing a stop or place name.');
+      return ListView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: const EdgeInsets.only(bottom: 28),
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(
+              WimbSpace.screen,
+              14,
+              WimbSpace.screen,
+              6,
+            ),
+            child: SectionLabel('Popular transit hubs'),
+          ),
+          ..._popularPlaces.map(
+            (place) => ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: WimbSpace.screen,
+                vertical: 6,
+              ),
+              leading: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: WimbColors.delhiGreen.withValues(alpha: 0.09),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.star_outline,
+                  size: 21,
+                  color: WimbColors.delhiGreen,
+                ),
+              ),
+              title: Text(
+                place.stopName,
+                style: const TextStyle(
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: const Padding(
+                padding: EdgeInsets.only(top: 2),
+                child: Text(
+                  'Major transit hub',
+                  style: TextStyle(fontSize: 12.5, color: WimbColors.inkMuted),
+                ),
+              ),
+              trailing: const Icon(
+                Icons.chevron_right,
+                size: 20,
+                color: WimbColors.inkFaint,
+              ),
+              onTap: () => Navigator.of(context).pop(place),
+            ),
+          ),
+        ],
+      );
     }
     if (_controller.text.trim().length < 2) {
       return _hint('Keep typing - at least two letters.');
@@ -250,29 +556,39 @@ class _PlaceSearchPageState extends State<PlaceSearchPage> {
     }
 
     return ListView.separated(
-      // Lets someone scroll the list away to get the keyboard out of the
-      // way, rather than having to dismiss it first.
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.only(top: 6, bottom: 28),
       itemCount: _results.length,
-      separatorBuilder: (_, _) => const Divider(height: 1, indent: 56),
+      separatorBuilder: (_, _) =>
+          const Divider(height: 1, indent: 78, endIndent: WimbSpace.screen),
       itemBuilder: (context, i) {
         final place = _results[i];
         return ListTile(
-          // Comfortably tappable without aiming.
-          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: WimbSpace.screen,
+            vertical: 8,
+          ),
           leading: Container(
-            width: 38,
-            height: 38,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: WimbColors.dtcRed.withValues(alpha: 0.08),
-              shape: BoxShape.circle,
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.place_outlined, size: 19, color: WimbColors.dtcRed),
+            child: const Icon(
+              Icons.place_outlined,
+              size: 21,
+              color: WimbColors.dtcRed,
+            ),
           ),
           title: Text(
             place.stopName,
             style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w500),
+          ),
+          trailing: const Icon(
+            Icons.chevron_right,
+            size: 20,
+            color: WimbColors.inkFaint,
           ),
           onTap: () => Navigator.of(context).pop(place),
         );
@@ -282,11 +598,12 @@ class _PlaceSearchPageState extends State<PlaceSearchPage> {
 
   Widget _hint(String text) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(34, 40, 34, 0),
+      padding: const EdgeInsets.fromLTRB(36, 44, 36, 0),
       child: Text(
         text,
         textAlign: TextAlign.center,
-        style: Theme.of(context).textTheme.bodySmall,
+        style: Theme.of(context).textTheme.bodyMedium
+            ?.copyWith(color: WimbColors.inkMuted),
       ),
     );
   }

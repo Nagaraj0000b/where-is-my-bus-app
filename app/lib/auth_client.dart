@@ -22,7 +22,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
-import 'api_client.dart' show apiBaseUrl, ApiUnreachableException;
+import 'api_client.dart'
+    show apiBaseUrl, getApiBaseUrl, ApiUnreachableException;
 
 /// Where the token is kept between app launches.
 ///
@@ -53,7 +54,11 @@ class AuthUser {
   final String email;
   final String displayName;
 
-  AuthUser({required this.userId, required this.email, required this.displayName});
+  AuthUser({
+    required this.userId,
+    required this.email,
+    required this.displayName,
+  });
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     return AuthUser(
@@ -90,18 +95,26 @@ class AuthRejectedException implements Exception {
 /// All three auth calls have the same shape - post some JSON, expect
 /// either a user and a token or an explanation - so the shape lives here
 /// once instead of three times.
-Future<Map<String, dynamic>> _postToAuth(String path, Map<String, String> body) async {
+Future<Map<String, dynamic>> _postToAuth(
+  String path,
+  Map<String, String> body,
+) async {
+  await getApiBaseUrl();
   final uri = Uri.parse('$apiBaseUrl$path');
 
   http.Response response;
   try {
     response = await http
-        .post(uri, headers: {'Content-Type': 'application/json'}, body: jsonEncode(body))
+        .post(
+          uri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(body),
+        )
         .timeout(const Duration(seconds: 15));
   } catch (_) {
     throw ApiUnreachableException(
-      "Can't reach the server. Is the API running, and is the phone on the "
-      "same WiFi as the laptop ($apiBaseUrl)?",
+      "Can't reach the API. Is the server running? "
+      "($apiBaseUrl)",
     );
   }
 
@@ -119,7 +132,9 @@ Future<Map<String, dynamic>> _postToAuth(String path, Map<String, String> body) 
     if (reason is String && reason.isNotEmpty) {
       throw AuthRejectedException(reason);
     }
-    throw ApiUnreachableException('Server error (HTTP ${response.statusCode}).');
+    throw ApiUnreachableException(
+      'Server error (HTTP ${response.statusCode}).',
+    );
   }
 
   return decoded;
@@ -142,8 +157,14 @@ Future<AuthUser> signUp({
 }
 
 /// Sign in to an existing account.
-Future<AuthUser> logIn({required String email, required String password}) async {
-  final body = await _postToAuth('/auth/login', {'email': email, 'password': password});
+Future<AuthUser> logIn({
+  required String email,
+  required String password,
+}) async {
+  final body = await _postToAuth('/auth/login', {
+    'email': email,
+    'password': password,
+  });
 
   await _secureStorage.write(key: _tokenKey, value: body['token'] as String);
   return AuthUser.fromJson(body['user'] as Map<String, dynamic>);
@@ -185,10 +206,13 @@ Future<AuthUser?> loadSignedInUser() async {
 
   http.Response response;
   try {
-    response = await http.get(
-      Uri.parse('$apiBaseUrl/auth/me'),
-      headers: {'Authorization': 'Bearer $token'},
-    ).timeout(const Duration(seconds: 10));
+    await getApiBaseUrl();
+    response = await http
+        .get(
+          Uri.parse('$apiBaseUrl/auth/me'),
+          headers: {'Authorization': 'Bearer $token'},
+        )
+        .timeout(const Duration(seconds: 10));
   } catch (_) {
     // The server being unreachable is NOT proof the token is bad, so it is
     // deliberately kept. Being signed out because the WiFi dropped for a
@@ -232,7 +256,11 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     required String password,
     required String displayName,
   }) async {
-    final user = await signUp(email: email, password: password, displayName: displayName);
+    final user = await signUp(
+      email: email,
+      password: password,
+      displayName: displayName,
+    );
     state = AsyncData(user);
   }
 
@@ -271,8 +299,9 @@ class AuthController extends AsyncNotifier<AuthUser?> {
   bool get skippedSignIn => _skippedSignIn;
 }
 
-final authControllerProvider =
-    AsyncNotifierProvider<AuthController, AuthUser?>(AuthController.new);
+final authControllerProvider = AsyncNotifierProvider<AuthController, AuthUser?>(
+  AuthController.new,
+);
 
 /// True once the app has finished deciding whether anyone is signed in -
 /// used to hold the splash screen until the answer is known, rather than
@@ -285,6 +314,8 @@ final authResolvedProvider = Provider<bool>((ref) {
 /// debug builds, so it costs nothing in a release build.
 void debugLogAuth(AuthUser? user) {
   if (kDebugMode) {
-    debugPrint(user == null ? '[auth] signed out' : '[auth] signed in as ${user.email}');
+    debugPrint(
+      user == null ? '[auth] signed out' : '[auth] signed in as ${user.email}',
+    );
   }
 }

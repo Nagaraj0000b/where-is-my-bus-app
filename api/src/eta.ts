@@ -160,7 +160,7 @@ export function rangeForHops(hops: number, dayType: DayType): { low: number; hig
   return { low: last.low + perHopLow * extra, high: last.high + perHopHigh * extra };
 }
 
-interface HopRow {
+export interface HopRow {
   to_stop_sequence: number;
   day_type: string;
   hour_of_day: number;
@@ -176,7 +176,7 @@ interface HopRow {
  * honestly labelled beats no answer at all, which is the whole "degrade
  * instead of disappearing" idea this project is built on.
  */
-function resolveHop(
+export function resolveHop(
   candidates: HopRow[],
   dayType: DayType,
   hourOfDay: number,

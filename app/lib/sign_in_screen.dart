@@ -8,9 +8,16 @@
 // The "continue without an account" button at the bottom is the important
 // one, and it is deliberately not hidden away. This app works perfectly
 // well for a stranger - accounts only buy saved places and the ability to
-// report a bus (see db/schema_auth.sql). Demanding a signup before showing
-// anyone a bus time would be exactly the kind of user-hostile behaviour
-// the project exists to push back on.
+// report a bus. Demanding a signup before showing anyone a bus time would
+// be exactly the kind of user-hostile behaviour the project exists to push
+// back on.
+//
+// LAYOUT
+//
+// A phone-first sign-in: wordmark at the top, one white form card, one
+// full-width primary button, and the escape hatch as an equally large
+// outlined button below it - not a tiny text link lost under a form.
+// No tagline, no quote, no paragraph. Labels and actions only.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -50,7 +57,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   ///
   /// These rules are deliberately the same as the ones in api/src/auth.ts.
   /// The server's copy is the one that actually protects anything - this
-  /// copy just means an obvious mistake gets a instant answer instead of a
+  /// copy just means an obvious mistake gets an instant answer instead of a
   /// round trip. If the two ever disagree, the server wins.
   String? _localProblem() {
     final email = _emailController.text.trim();
@@ -111,48 +118,39 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     return Scaffold(
       backgroundColor: WimbColors.cream,
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(22, 34, 22, 28),
-          children: [
-            _header(context),
-            const SizedBox(height: 30),
-            _formCard(context),
-            const SizedBox(height: 18),
-            _withoutAccountButton(context),
-          ],
+        // A plain scrolling column, not a lazy list: a sign-in form is
+        // short enough that building all of it costs nothing, and it means
+        // the escape hatch below the form is always laid out even on a
+        // short screen.
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 14, 24, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _header(),
+              const SizedBox(height: 18),
+              _formCard(context),
+              const SizedBox(height: 12),
+              _withoutAccountButton(context),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  /// The wordmark and the one-line statement of what the app is for.
-  Widget _header(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // The wordmark is white-on-red everywhere else in the app; here
-        // there is no red bar behind it, so it is drawn in ink instead.
-        const WimbWordmark(color: WimbColors.ink),
-        const SizedBox(height: 18),
-        Text(
-          'Honest bus times for Delhi.',
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Every time this app gives you comes with a range and a note '
-          'saying how much to trust it. No single number pretending to be '
-          'certain.',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-      ],
+  /// The wordmark, and nothing else. The form already says "Sign in".
+  Widget _header() {
+    return const Align(
+      alignment: Alignment.centerLeft,
+      child: WimbWordmark(color: WimbColors.ink),
     );
   }
 
   Widget _formCard(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -163,6 +161,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               TextField(
                 controller: _nameController,
                 textCapitalization: TextCapitalization.words,
+                textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(labelText: 'Your name'),
               ),
               const SizedBox(height: 12),
@@ -172,6 +171,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               autocorrect: false,
+              textInputAction: TextInputAction.next,
               decoration: const InputDecoration(labelText: 'Email'),
             ),
             const SizedBox(height: 12),
@@ -184,10 +184,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 helperText: _creatingAccount ? 'At least 8 characters.' : null,
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _passwordHidden ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    _passwordHidden
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
                     color: WimbColors.inkMuted,
                   ),
-                  onPressed: () => setState(() => _passwordHidden = !_passwordHidden),
+                  onPressed: () =>
+                      setState(() => _passwordHidden = !_passwordHidden),
                   tooltip: _passwordHidden ? 'Show password' : 'Hide password',
                 ),
               ),
@@ -201,29 +204,31 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               _errorBox(context, _errorMessage!),
             ],
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             FilledButton(
               onPressed: _busy ? null : _submit,
               child: _busy
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.2,
+                        color: Colors.white,
+                      ),
                     )
                   : Text(_creatingAccount ? 'Create account' : 'Sign in'),
             ),
 
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             TextButton(
               onPressed: _busy
                   ? null
                   : () => setState(() {
-                        _creatingAccount = !_creatingAccount;
-                        // The old message almost certainly referred to the
-                        // other mode, so it would only confuse now.
-                        _errorMessage = null;
-                      }),
-              style: TextButton.styleFrom(foregroundColor: WimbColors.dtcRed),
+                      _creatingAccount = !_creatingAccount;
+                      // The old message almost certainly referred to the
+                      // other mode, so it would only confuse now.
+                      _errorMessage = null;
+                    }),
               child: Text(
                 _creatingAccount
                     ? 'I already have an account'
@@ -238,21 +243,24 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
   Widget _errorBox(BuildContext context, String message) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: WimbColors.dtcRed.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: WimbColors.dtcRed.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(WimbRadius.field),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.error_outline, size: 17, color: WimbColors.dtcRed),
-          const SizedBox(width: 9),
+          const Icon(Icons.error_outline, size: 18, color: WimbColors.dtcRed),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(fontSize: 13, color: WimbColors.dtcRedDark, height: 1.35),
+              style: const TextStyle(
+                fontSize: 13,
+                color: WimbColors.dtcRedDark,
+                height: 1.4,
+              ),
             ),
           ),
         ],
@@ -260,27 +268,22 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     );
   }
 
+  /// The escape hatch. Given the same width and almost the same height as
+  /// the primary button, because for a stranger it IS the primary action.
   Widget _withoutAccountButton(BuildContext context) {
-    return Column(
-      children: [
-        TextButton(
-          onPressed: _busy
-              ? null
-              : () => ref.read(authControllerProvider.notifier).continueWithoutAccount(),
-          style: TextButton.styleFrom(foregroundColor: WimbColors.inkMuted),
-          child: const Text('Continue without an account'),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Text(
-            'Finding a bus never needs an account. Signing in only adds '
-            'saved places and lets you report a bus that the feed has '
-            'missed.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ),
-      ],
+    return OutlinedButton.icon(
+      onPressed: _busy
+          ? null
+          : () => ref
+                .read(authControllerProvider.notifier)
+                .continueWithoutAccount(),
+      icon: const Icon(Icons.person_outline, size: 19),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: WimbColors.ink,
+        backgroundColor: WimbColors.cardCream,
+        minimumSize: const Size.fromHeight(52),
+      ),
+      label: const Text('Continue without an account'),
     );
   }
 }

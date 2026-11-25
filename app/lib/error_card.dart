@@ -4,6 +4,10 @@
 // is NOT a failure, and offering to retry it would be a lie - the same
 // question asked again gets the same honest answer. Only a genuine request
 // failure gets a "Try again" button. See the call sites for which is which.
+//
+// Layout: an icon in a tinted circle, the message, and the retry action on
+// its own line. A phone card cannot hold a long Delhi error sentence and a
+// button side by side without squeezing both.
 
 import 'package:flutter/material.dart';
 
@@ -28,7 +32,6 @@ class ErrorCard extends StatelessWidget {
     final accent = isRealFailure ? WimbColors.dtcRed : WimbColors.inkMuted;
 
     return Card(
-      color: isRealFailure ? const Color(0xFFFDF3F2) : WimbColors.cardCream,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -37,19 +40,32 @@ class ErrorCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  isRealFailure ? Icons.cloud_off : Icons.search_off,
-                  size: 19,
-                  color: accent,
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.09),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    isRealFailure ? Icons.cloud_off : Icons.search_off,
+                    size: 19,
+                    color: accent,
+                  ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    message,
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 1.4,
-                      color: isRealFailure ? WimbColors.dtcRedDark : WimbColors.ink,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      message,
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.4,
+                        color: isRealFailure
+                            ? WimbColors.dtcRedDark
+                            : WimbColors.ink,
+                      ),
                     ),
                   ),
                 ),
@@ -61,8 +77,7 @@ class ErrorCard extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
                   onPressed: onRetry,
-                  icon: const Icon(Icons.refresh, size: 17),
-                  style: TextButton.styleFrom(foregroundColor: WimbColors.dtcRed),
+                  icon: const Icon(Icons.refresh, size: 18),
                   label: const Text('Try again'),
                 ),
               ),

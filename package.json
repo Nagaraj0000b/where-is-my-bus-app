@@ -4,20 +4,14 @@
   "private": true,
   "description": "Bus tracking for Delhi with honest uncertainty. Analysis tools.",
   "scripts": {
-    "peek": "node tools/peek-frame.js",
-    "scan-archive": "node tools/scan-archive.js",
-    "profile-gtfs": "node tools/profile-gtfs.js",
-    "load-realtime": "node tools/load-realtime.js",
-    "match-vehicle-progress": "node tools/match-vehicle-progress.js",
-    "check-eta": "node api/check-eta.ts",
-    "api": "node api/src/server.ts",
-    "test-api": "node api/test-api.ts",
-    "check-journey": "node api/check-journey.ts",
-    "check-auth": "node api/check-auth.ts",
-    "check-all": "node api/check-eta.ts && node api/check-journey.ts && node api/check-auth.ts",
-    "bench": "node api/bench.ts"
+    "load-realtime": "node --env-file-if-exists=.env tools/load-realtime.js",
+    "match-vehicle-progress": "node --env-file-if-exists=.env tools/match-vehicle-progress.js",
+    "api": "node --env-file-if-exists=.env api/src/server.ts",
+    "simulate-passenger": "node --env-file-if-exists=.env tools/simulate-passenger.js",
+    "export-offline": "node --env-file-if-exists=.env tools/export_offline_db.ts"
   },
   "dependencies": {
+    "@fastify/cors": "^11.3.1",
     "bcryptjs": "^3.0.3",
     "fastify": "^5.12.1",
     "gtfs-realtime-bindings": "^1.1.1",
@@ -30,5 +24,9 @@
     "@types/pg": "^8.23.1",
     "typescript": "^7.0.2"
   },
-  "type": "module"
+  "type": "module",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

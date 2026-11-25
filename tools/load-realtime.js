@@ -22,7 +22,7 @@ const { Client } = require('pg');
 const { transit_realtime } = require('gtfs-realtime-bindings');
 
 // Archive lives outside the repo on purpose - see CLAUDE.md section 9.
-const DATA_ROOT = process.env.DATA_ROOT || 'C:\\Users\\nagga\\Desktop\\DATA FOR WIMB';
+const DATA_ROOT = process.env.DATA_ROOT || path.join(process.cwd(), 'data');
 const DATABASE_URL = process.env.DATABASE_URL || 'postgres://wimb:wimb_local_dev@localhost:5432/wimb';
 const only = process.argv[2];
 

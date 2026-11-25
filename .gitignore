@@ -1,5 +1,6 @@
 # Never commit the key
 .env
+.ngrok-token
 
 # The archive lives outside the repo (DATA_ROOT), but guard against
 # anyone pointing it here by accident.
@@ -21,5 +22,9 @@ app/run_web.bat
 # GitHub's 100 MB hard limit for a single file - this cannot be committed even
 # if you wanted to. Keep the zips somewhere outside the repo and reload with
 # db/load.sql. docs/static-feed-profile.md records what was in this one.
+# Built Android APKs and unused 0-byte placeholder db
+*.apk
+app/assets/offline_transit.db
+
 delhi_buses_static_gtfs_v1/
 __MACOSX/

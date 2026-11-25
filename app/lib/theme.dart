@@ -1,36 +1,31 @@
 // The look of the app, in one place.
 //
-// WHY A DESIGN FILE EXISTS AT ALL
+// THE DIRECTION
 //
-// Before this, the whole theme was a single line - ColorScheme.fromSeed
-// with a teal seed - and every screen picked its own colours and text
-// sizes inline. That is why the app looked unfinished: nothing was
-// deliberate, and nothing matched anything else.
+// Minimal, search-first. The app is a utility someone opens at a bus stop,
+// so the first screen is one question - "Where is your bus?" - and one
+// large search field. No branded banner competes with it, and the canvas
+// stays a soft off-white so the content is the only thing with weight.
 //
-// THE IDEA: A DELHI BUS, NOT A GENERIC TRANSIT APP
+// The palette keeps the red and green the project already measured
+// against, but uses them as accents rather than surfaces. The destination
+// board is still the signature detail: a route number should read as a
+// real bus, not a string in a list.
 //
-// The palette is DTC's own - the red of a Delhi Transport Corporation bus,
-// the green of its cluster buses, on the warm off-white of a printed
-// timetable rather than the cold grey of a default Material app.
+// LAYOUT REFERENCES (lookap)
 //
-// The strongest borrowed detail is the DESTINATION BOARD: the black board
-// above a bus windscreen with the route number and where it is going, in
-// condensed capitals. Route numbers throughout the app are drawn that way
-// (see RouteBoard below), so a route reads as a real bus rather than as a
-// string of text in a list.
+//   Home search anchor: "Expanding Search Interaction" by sucodee
+//   (@sucodeee, https://x.com/sucodeee/status/2106690154429841524) - a soft
+//   off-white canvas with one large pill search field and generous space
+//   around it.
 //
-// A NOTE ON THE FONTS
+//   Journey summary: "Flight Status Card Microinteraction" by Michael Nowak
+//   (@mnowakdesign, https://x.com/mnowakdesign/status/2110430533876658614) -
+//   origin and destination at the two ends, a thin route line with the
+//   vehicle in the middle, quiet times underneath.
 //
-// No font files are bundled. Android already ships a condensed sans and a
-// monospace face, and those are exactly the two shapes this design needs -
-// condensed for destination boards, monospace for numbers that should line
-// up. Bundling fonts would add megabytes, and fetching them at runtime
-// would break the offline capability CLAUDE.md asks for (feature #7).
-//
-// Naming the family explicitly matters for a second reason: with no font
-// set at all, a phone with a custom system font substitutes its own. On
-// the OnePlus this was tested on, that meant the entire app rendered in a
-// serif, which looked nothing like the intended design.
+// Only the arrangement of information is borrowed. Every colour, typeface,
+// size and pixel here is this project's own.
 
 import 'package:flutter/material.dart';
 
@@ -42,33 +37,45 @@ class WimbColors {
   static const dtcRed = Color(0xFFC1272D);
   static const dtcRedDark = Color(0xFF9A1F24);
 
-  /// Cluster-bus green. Doubles as the "you can trust this" colour.
-  static const delhiGreen = Color(0xFF046A38);
-  static const delhiGreenLight = Color(0xFFE3F0E8);
+  /// Cluster-bus green.
+  static const delhiGreen = Color(0xFF0B6B3A);
+  static const delhiGreenLight = Color(0xFFE7F2EB);
 
-  /// Warm off-white background, like printed paper rather than a screen.
-  static const cream = Color(0xFFFFF8EE);
-  static const cardCream = Color(0xFFFFFDF8);
+  /// The app canvas: a soft off-white, so a white card or a search field
+  /// sits just above it without needing a heavy border.
+  static const cream = Color(0xFFF6F6F3);
+  static const cardCream = Color(0xFFFFFFFF);
 
-  /// Text. Warm near-black rather than pure black, which looks harsh on
-  /// a cream background.
-  static const ink = Color(0xFF1A1512);
-  static const inkMuted = Color(0xFF6B5F57);
+  /// A second surface for search fields, chips and unselected segments.
+  static const surfaceMuted = Color(0xFFEFEFEC);
+
+  /// Text. Near-black with no colour cast.
+  static const ink = Color(0xFF111111);
+  static const inkMuted = Color(0xFF6B6B6B);
+  static const inkFaint = Color(0xFF9B9B9B);
 
   /// The destination board above a bus windscreen: near-black, with warm
   /// off-white lettering the colour of an old bulb-lit sign.
   static const board = Color(0xFF14110F);
   static const boardText = Color(0xFFF5E6C8);
 
-  /// Confidence levels. Green / amber / clay rather than green / orange /
-  /// red, because a pure red would read as "error" when it actually means
-  /// "this number is rough".
-  static const trustHigh = delhiGreen;
-  static const trustMedium = Color(0xFFE8A33D);
-  static const trustLow = Color(0xFFB5502A);
+  /// Data-status colours. Each one names a source, not a feeling:
+  /// live GPS, a rider report, an estimate, a historical observation,
+  /// a stale fix, or no network.
+  static const statusLive = delhiGreen;
+  static const statusRider = Color(0xFF0F766E);
+  static const statusEstimated = Color(0xFFB45309);
+  static const statusHistorical = Color(0xFF1D4ED8);
+  static const statusStale = Color(0xFF9A3412);
+  static const statusOffline = Color(0xFF6B7280);
+  static const statusMuted = Color(0xFF6B7280);
 
-  /// Faint warm border, used instead of a shadow in most places.
-  static const hairline = Color(0xFFE5D9C9);
+  /// Faint cool border, used on cards and dividers.
+  static const hairline = Color(0xFFE7E7E2);
+
+  /// The one shadow colour in the system. Low opacity, wide blur, shifted
+  /// down - a surface lifted off the page, not a drop shadow from a box.
+  static const shadow = Color(0x0A000000);
 }
 
 /// The app's two typefaces, bundled with the app (see pubspec.yaml).
@@ -92,45 +99,47 @@ class WimbFonts {
   static const mono = 'Barlow';
 
   /// Makes every digit the same width, so a column of times or distances
-  /// lines up instead of jittering as the numbers change. This is what a
-  /// monospace font would have been used for, done properly.
+  /// lines up instead of jittering as the numbers change.
   static const tabular = <FontFeature>[FontFeature.tabularFigures()];
 
   /// Empty on purpose. The fonts are bundled, so there is nothing to fall
   /// back TO - and leaving a system name here would let the substitution
-  /// problem above creep back in. Kept as a named constant so call sites
-  /// do not need changing if that ever stops being true.
+  /// problem above creep back in.
   static const fallback = <String>[];
 }
 
-/// Turns the API's confidence word into the colour that represents it.
-/// One function so the mapping cannot drift between screens.
-Color trustColor(String level) {
-  switch (level) {
-    case 'high':
-      return WimbColors.trustHigh;
-    case 'medium':
-      return WimbColors.trustMedium;
-    case 'low':
-      return WimbColors.trustLow;
-    default:
-      return WimbColors.inkMuted;
-  }
+/// The spacing rhythm. Screens use these instead of inventing paddings, so
+/// every screen breathes the same way.
+class WimbSpace {
+  WimbSpace._();
+
+  /// Standard screen gutter. 20 instead of the old 16: on a 360dp phone the
+  /// extra 4dp is the difference between a designed margin and a default.
+  static const screen = 20.0;
+
+  /// Between two major blocks on a screen.
+  static const section = 24.0;
+
+  /// Between a label and the thing it labels.
+  static const label = 8.0;
+
+  /// Between cards in a list.
+  static const card = 12.0;
 }
 
-/// The plain-English name for a confidence level, for showing next to the
-/// trust dots. Kept beside trustColor so the two stay in step.
-String trustLabel(String level) {
-  switch (level) {
-    case 'high':
-      return 'high trust';
-    case 'medium':
-      return 'medium trust';
-    case 'low':
-      return 'rough estimate';
-    default:
-      return 'unknown';
-  }
+/// The corner radius family. Three values only; anything else is a mistake
+/// waiting to look out of place.
+class WimbRadius {
+  WimbRadius._();
+
+  /// Outer cards and sheets.
+  static const card = 20.0;
+
+  /// Inner surfaces: fields, time pills, small panels.
+  static const field = 14.0;
+
+  /// Fully rounded pills and chips.
+  static const pill = 999.0;
 }
 
 /// The app's one ThemeData. Everything component-level is set here rather
@@ -152,58 +161,62 @@ ThemeData buildWimbTheme() {
     fontFamily: WimbFonts.body,
     fontFamilyFallback: WimbFonts.fallback,
 
-    // Headings are condensed and tight; body text is not. The contrast
-    // between the two is most of what makes the app look designed rather
-    // than default.
-    // SIZED FOR A NARROW PHONE, NOT A BROWSER.
-    //
-    // Every size here was cut after looking at real screenshots from the
-    // test phone, which is 359dp wide - narrower than most. At the sizes
-    // this started with, only five route rows fitted on a very tall
-    // screen and route descriptions wrapped to five lines. Text that
-    // looks comfortable in a wide preview is too big in the hand.
+    // Type is deliberately larger than the first version. That version was
+    // cut to fit five route rows on a 359dp test phone, which made every
+    // label feel like fine print. A modern phone screen can afford 15dp
+    // body text; the long lists are handled by scrolling, not by shrinking.
     textTheme: const TextTheme(
       displaySmall: TextStyle(
         fontFamily: WimbFonts.condensed,
         fontFamilyFallback: WimbFonts.fallback,
-        fontSize: 27,
+        fontSize: 32,
         fontWeight: FontWeight.w700,
-        letterSpacing: -0.2,
+        letterSpacing: -0.3,
+        height: 1.05,
         color: WimbColors.ink,
       ),
       headlineMedium: TextStyle(
         fontFamily: WimbFonts.condensed,
         fontFamilyFallback: WimbFonts.fallback,
-        fontSize: 21,
+        fontSize: 26,
         fontWeight: FontWeight.w700,
+        letterSpacing: -0.2,
+        height: 1.1,
         color: WimbColors.ink,
       ),
       titleLarge: TextStyle(
         fontFamily: WimbFonts.condensed,
         fontFamilyFallback: WimbFonts.fallback,
-        fontSize: 17,
+        fontSize: 20,
         fontWeight: FontWeight.w700,
+        height: 1.15,
         color: WimbColors.ink,
       ),
-      titleMedium: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: WimbColors.ink),
+      titleMedium: TextStyle(
+        fontSize: 15.5,
+        fontWeight: FontWeight.w600,
+        height: 1.25,
+        color: WimbColors.ink,
+      ),
       // A small all-caps label used above each section. The wide letter
       // spacing is what makes it read as a label rather than as a heading.
       labelSmall: TextStyle(
-        fontSize: 10.5,
+        fontSize: 11,
         fontWeight: FontWeight.w700,
         letterSpacing: 1.1,
         color: WimbColors.inkMuted,
       ),
-      bodyLarge: TextStyle(fontSize: 14, color: WimbColors.ink, height: 1.35),
-      bodyMedium: TextStyle(fontSize: 13, color: WimbColors.ink, height: 1.35),
-      bodySmall: TextStyle(fontSize: 11.5, color: WimbColors.inkMuted, height: 1.3),
+      bodyLarge: TextStyle(fontSize: 15, color: WimbColors.ink, height: 1.45),
+      bodyMedium: TextStyle(fontSize: 14, color: WimbColors.ink, height: 1.45),
+      bodySmall: TextStyle(
+        fontSize: 12.5,
+        color: WimbColors.inkMuted,
+        height: 1.4,
+      ),
     ),
 
-    // A plain cream bar with a dark title, not a slab of red on every
-    // screen. Red everywhere made the app feel like a web page with a
-    // branded masthead; here it is the accent, and the content is what
-    // carries the screen. The home screen keeps its red hero, because
-    // there it IS the content.
+    // A plain canvas bar with a dark title. Red is the accent, not the
+    // surface - except on the home hero, where it IS the content.
     appBarTheme: const AppBarTheme(
       backgroundColor: WimbColors.cream,
       foregroundColor: WimbColors.ink,
@@ -211,26 +224,29 @@ ThemeData buildWimbTheme() {
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
+      toolbarHeight: 60,
+      titleSpacing: WimbScreenTitle.spacing,
       titleTextStyle: TextStyle(
         fontFamily: WimbFonts.condensed,
         fontFamilyFallback: WimbFonts.fallback,
-        fontSize: 21,
+        fontSize: 24,
         fontWeight: FontWeight.w700,
-        letterSpacing: 0.2,
+        letterSpacing: 0.1,
         color: WimbColors.ink,
       ),
     ),
 
-    // No borders. A hairline outline around every card is a web pattern -
-    // on a phone it turns a screen into a stack of boxes. Separation comes
-    // from a slightly lighter surface against the cream background, which
-    // is quieter and lets the content group itself.
-    cardTheme: const CardThemeData(
+    // White cards on the light canvas, lifted by one soft shadow rather
+    // than outlined. The hairline is kept at a very low contrast so it only
+    // shows on bright screens, where the shadow alone disappears.
+    cardTheme: CardThemeData(
       color: WimbColors.cardCream,
       elevation: 0,
       margin: EdgeInsets.zero,
+      shadowColor: WimbColors.shadow,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(18)),
+        borderRadius: BorderRadius.circular(WimbRadius.card),
+        side: const BorderSide(color: WimbColors.hairline, width: 0.8),
       ),
     ),
 
@@ -238,78 +254,186 @@ ThemeData buildWimbTheme() {
     // single most web-looking thing a Flutter app can put on screen.
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Colors.white,
+      fillColor: WimbColors.surfaceMuted,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(WimbRadius.field),
         borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(WimbRadius.field),
         borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: WimbColors.dtcRed, width: 1.6),
+        borderRadius: BorderRadius.circular(WimbRadius.field),
+        borderSide: const BorderSide(color: WimbColors.dtcRed, width: 1.5),
       ),
-      hintStyle: TextStyle(color: WimbColors.inkMuted.withValues(alpha: 0.7)),
+      hintStyle: const TextStyle(color: WimbColors.inkFaint, fontSize: 15),
       labelStyle: const TextStyle(color: WimbColors.inkMuted),
-      floatingLabelStyle: const TextStyle(color: WimbColors.dtcRed, fontWeight: FontWeight.w600),
+      floatingLabelStyle: const TextStyle(
+        color: WimbColors.dtcRed,
+        fontWeight: FontWeight.w600,
+      ),
     ),
 
+    // 54dp tall and 16dp corners: comfortably past the thumb-target
+    // minimum, and rounded like a modern app button rather than a capsule.
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: WimbColors.dtcRed,
         foregroundColor: Colors.white,
-        // Comfortably over the ~48dp thumb-target minimum, without the
-        // slab look 56 gave it on a narrow screen.
-        minimumSize: const Size.fromHeight(50),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+        disabledBackgroundColor: WimbColors.dtcRed.withValues(alpha: 0.28),
+        disabledForegroundColor: Colors.white.withValues(alpha: 0.9),
+        minimumSize: const Size.fromHeight(54),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(WimbRadius.field),
+        ),
         textStyle: const TextStyle(
           fontFamily: WimbFonts.body,
-          fontSize: 15,
+          fontSize: 15.5,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.1,
+        ),
+      ),
+    ),
+
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: WimbColors.ink,
+        minimumSize: const Size(0, 48),
+        side: const BorderSide(color: WimbColors.hairline),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(WimbRadius.field),
+        ),
+        textStyle: const TextStyle(
+          fontFamily: WimbFonts.body,
+          fontSize: 14,
           fontWeight: FontWeight.w600,
-          letterSpacing: 0.2,
+        ),
+      ),
+    ),
+
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: WimbColors.dtcRed,
+        minimumSize: const Size(0, 44),
+        textStyle: const TextStyle(
+          fontFamily: WimbFonts.body,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
         ),
       ),
     ),
 
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: WimbColors.cardCream,
-      indicatorColor: WimbColors.dtcRed.withValues(alpha: 0.12),
+      indicatorColor: WimbColors.dtcRed.withValues(alpha: 0.10),
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
-      height: 66,
+      height: 72,
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       labelTextStyle: WidgetStateProperty.resolveWith(
         (states) => TextStyle(
           fontSize: 11.5,
-          fontWeight: states.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
-          color: states.contains(WidgetState.selected) ? WimbColors.dtcRed : WimbColors.inkMuted,
+          fontWeight: states.contains(WidgetState.selected)
+              ? FontWeight.w700
+              : FontWeight.w500,
+          color: states.contains(WidgetState.selected)
+              ? WimbColors.dtcRed
+              : WimbColors.inkMuted,
         ),
       ),
       iconTheme: WidgetStateProperty.resolveWith(
         (states) => IconThemeData(
-          size: 23,
-          color: states.contains(WidgetState.selected) ? WimbColors.dtcRed : WimbColors.inkMuted,
+          size: 24,
+          color: states.contains(WidgetState.selected)
+              ? WimbColors.dtcRed
+              : WimbColors.inkMuted,
         ),
       ),
+    ),
+
+    chipTheme: ChipThemeData(
+      backgroundColor: WimbColors.cardCream,
+      selectedColor: WimbColors.dtcRed.withValues(alpha: 0.10),
+      side: const BorderSide(color: WimbColors.hairline),
+      labelStyle: const TextStyle(
+        fontFamily: WimbFonts.body,
+        fontSize: 12.5,
+        fontWeight: FontWeight.w600,
+        color: WimbColors.ink,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(WimbRadius.pill),
+      ),
+      showCheckmark: false,
     ),
 
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: ButtonStyle(
-        textStyle: WidgetStatePropertyAll(
-          const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        textStyle: const WidgetStatePropertyAll(
+          TextStyle(
+            fontFamily: WimbFonts.body,
+            fontSize: 14.5,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        side: const WidgetStatePropertyAll(BorderSide.none),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(WimbRadius.field),
+          ),
         ),
       ),
     ),
 
-    dividerTheme: const DividerThemeData(color: WimbColors.hairline, thickness: 1, space: 1),
+    dividerTheme: const DividerThemeData(
+      color: WimbColors.hairline,
+      thickness: 1,
+      space: 1,
+    ),
 
-    snackBarTheme: const SnackBarThemeData(
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: WimbColors.cardCream,
+      surfaceTintColor: Colors.transparent,
+      showDragHandle: true,
+      dragHandleColor: WimbColors.hairline,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+    ),
+
+    snackBarTheme: SnackBarThemeData(
       backgroundColor: WimbColors.board,
-      contentTextStyle: TextStyle(color: WimbColors.boardText, fontSize: 14),
+      contentTextStyle: const TextStyle(
+        fontFamily: WimbFonts.body,
+        color: WimbColors.boardText,
+        fontSize: 14,
+      ),
       behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(WimbRadius.field),
+      ),
+    ),
+
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: WimbColors.dtcRed,
+      linearTrackColor: WimbColors.surfaceMuted,
+    ),
+
+    listTileTheme: const ListTileThemeData(
+      iconColor: WimbColors.inkMuted,
+      textColor: WimbColors.ink,
     ),
   );
+}
+
+/// App bar title spacing, named so the theme and the screens cannot drift.
+class WimbScreenTitle {
+  WimbScreenTitle._();
+  static const spacing = 20.0;
 }
 
 // ---------------------------------------------------------------------------
@@ -344,12 +468,12 @@ class RouteBoard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: compact ? 8 : 11,
-        vertical: compact ? 4 : 7,
+        horizontal: compact ? 9 : 12,
+        vertical: compact ? 5 : 8,
       ),
       decoration: BoxDecoration(
         color: WimbColors.board,
-        borderRadius: BorderRadius.circular(compact ? 6 : 8),
+        borderRadius: BorderRadius.circular(compact ? 8 : 10),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -369,7 +493,7 @@ class RouteBoard extends StatelessWidget {
               fontFamily: WimbFonts.condensed,
               fontFamilyFallback: WimbFonts.fallback,
               color: WimbColors.boardText,
-              fontSize: compact ? 13 : 16,
+              fontSize: compact ? 14 : 17,
               fontWeight: FontWeight.w700,
               // Wide spacing is what sells the destination-board look -
               // real boards space their letters out to fill the width.
@@ -401,117 +525,189 @@ class RouteBoard extends StatelessWidget {
   }
 }
 
-/// The trust indicator, as a row of five dots.
-///
-/// CLAUDE.md's fourth core feature: the user is told how much to trust a
-/// number, not just given the number. Dots rather than a single coloured
-/// blob because a count is glanceable - five filled versus two filled
-/// reads instantly, where two similar shades of colour do not, and it
-/// still works for someone who cannot easily tell green from amber.
-class TrustDots extends StatelessWidget {
-  final String level; // 'high' | 'medium' | 'low'
-  final bool showLabel;
-
-  const TrustDots({super.key, required this.level, this.showLabel = true});
-
-  /// How many of the five dots are filled in.
-  int get _filled {
-    switch (level) {
-      case 'high':
-        return 5;
-      case 'medium':
-        return 3;
-      case 'low':
-        return 1;
-      default:
-        return 0;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final color = trustColor(level);
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (int i = 0; i < 5; i++)
-          Padding(
-            padding: const EdgeInsets.only(right: 3),
-            child: Container(
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: i < _filled ? color : color.withValues(alpha: 0.18),
-              ),
-            ),
-          ),
-        if (showLabel) ...[
-          const SizedBox(width: 7),
-          Text(
-            trustLabel(level),
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
 /// A small all-caps label that sits above a group of things, e.g. "BY THE
 /// HOUR". Used instead of a heading where the group needs naming but does
 /// not deserve the visual weight of a real title.
 class SectionLabel extends StatelessWidget {
   final String text;
-  const SectionLabel(this.text, {super.key});
+  final Widget? trailing;
+
+  const SectionLabel(this.text, {super.key, this.trailing});
 
   @override
   Widget build(BuildContext context) {
+    final label = Text(
+      text.toUpperCase(),
+      style: Theme.of(context).textTheme.labelSmall,
+    );
+    if (trailing == null) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: WimbSpace.label),
+        child: label,
+      );
+    }
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(text.toUpperCase(), style: Theme.of(context).textTheme.labelSmall),
+      padding: const EdgeInsets.only(bottom: WimbSpace.label),
+      child: Row(
+        children: [
+          Expanded(child: label),
+          trailing!,
+        ],
+      ),
     );
   }
 }
 
-/// The app's wordmark: "WHERE IS MY BUS" over "दिल्ली · DELHI".
+/// A compact status pill. One widget so "Direct", "FASTEST", "Live" and
+/// "Verified by crowd" all share a shape and a text size.
+class StatusPill extends StatelessWidget {
+  final String label;
+  final Color color;
+  final bool filled;
+
+  const StatusPill({
+    super.key,
+    required this.label,
+    required this.color,
+    this.filled = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: filled ? color : color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(WimbRadius.pill),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.4,
+          color: filled ? Colors.white : color,
+        ),
+      ),
+    );
+  }
+}
+
+/// A quiet full-width note with an icon, used for instructions and advice.
+/// Replaces the several hand-built green/red boxes that had drifted apart.
+class InfoBanner extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color color;
+
+  const InfoBanner({
+    super.key,
+    required this.icon,
+    required this.text,
+    this.color = WimbColors.delhiGreen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(WimbRadius.field),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                height: 1.35,
+                color: color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The empty-state block used by every screen before a search is made.
+/// One shape, so the app stops asking the same question in four fonts.
+class EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String body;
+
+  const EmptyState({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 34, 24, 20),
+      child: Column(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: const BoxDecoration(
+              color: WimbColors.surfaceMuted,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 30, color: WimbColors.inkFaint),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            body,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The app's wordmark: "WHERE IS MY BUS", on one line.
 ///
-/// The Hindi is not decoration - this is an app for Delhi, and a Delhi bus
-/// carries its route board in both scripts. Showing only English would
-/// look like software written about Delhi from somewhere else.
+/// The old version carried "दिल्ली · DELHI" underneath. The data behind the
+/// app is still Delhi's, but the logo no longer brands the product to one
+/// city - the app is simply Where Is My Bus.
 class WimbWordmark extends StatelessWidget {
   final Color color;
   const WimbWordmark({super.key, this.color = Colors.white});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          'WHERE IS MY BUS',
-          style: TextStyle(
-            fontFamily: WimbFonts.condensed,
-            fontFamilyFallback: WimbFonts.fallback,
-            color: color,
-            fontSize: 21,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.4,
-            height: 1.05,
-          ),
-        ),
-        Text(
-          'दिल्ली · DELHI',
-          style: TextStyle(
-            color: color.withValues(alpha: 0.82),
-            fontSize: 11.5,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 1.1,
-          ),
-        ),
-      ],
+    return Text(
+      'WHERE IS MY BUS',
+      style: TextStyle(
+        fontFamily: WimbFonts.condensed,
+        fontFamilyFallback: WimbFonts.fallback,
+        color: color,
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.8,
+        height: 1.0,
+      ),
     );
   }
 }
@@ -528,15 +724,21 @@ class CaveatLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 5),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 2, right: 7),
-            child: Icon(Icons.info_outline, size: 13, color: WimbColors.inkMuted.withValues(alpha: 0.7)),
+            padding: const EdgeInsets.only(top: 2, right: 8),
+            child: Icon(
+              Icons.info_outline,
+              size: 14,
+              color: WimbColors.inkFaint,
+            ),
           ),
-          Expanded(child: Text(text, style: Theme.of(context).textTheme.bodySmall)),
+          Expanded(
+            child: Text(text, style: Theme.of(context).textTheme.bodySmall),
+          ),
         ],
       ),
     );

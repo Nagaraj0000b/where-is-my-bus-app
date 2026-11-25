@@ -4,23 +4,23 @@
 //
 //   1. Apply the theme (see theme.dart - the Delhi bus identity).
 //   2. Decide whether anyone is signed in, before showing anything.
-//   3. Hold the four tabs once that is settled.
+//   3. Hold the three tabs once that is settled.
 //
-// Step 2 is why there is a splash screen at all. Checking the saved token
-// means asking the server, which takes a moment; without the splash the
-// app would flash the sign-in screen and then snatch it away from someone
-// who was already signed in.
+// Step 2 is a simple first-run sign-in. Skip is equally prominent and is
+// remembered, so a stranger reaches Nearby on the second launch without
+// seeing the form again.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'arrival_alarm_service.dart';
 import 'auth_client.dart';
-import 'by_hour_screen.dart';
-import 'home_screen.dart';
 import 'journey_screen.dart';
-import 'routes_screen.dart';
+import 'nearby_screen.dart';
+import 'saved_screen.dart';
 import 'sign_in_screen.dart';
 import 'theme.dart';
+import 'you_screen.dart';
 
 // ProviderScope is Riverpod's requirement - it is what actually stores the
 // state behind every provider used anywhere in the app, so it has to sit
@@ -69,26 +69,29 @@ class AuthGate extends ConsumerWidget {
   }
 }
 
-/// Shown for the moment it takes to check the saved token. Branded rather
-/// than a bare spinner, so the first thing the app ever shows still looks
-/// like this app.
+/// Shown for the moment it takes to check the saved token. An off-white
+/// splash with the wordmark in ink, so the first frame already matches the
+/// rest of the app.
 class _SplashScreen extends StatelessWidget {
   const _SplashScreen();
 
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      backgroundColor: WimbColors.dtcRed,
+      backgroundColor: WimbColors.cream,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            WimbWordmark(),
+            WimbWordmark(color: WimbColors.ink),
             SizedBox(height: 26),
             SizedBox(
               width: 22,
               height: 22,
-              child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+              child: CircularProgressIndicator(
+                strokeWidth: 2.2,
+                color: WimbColors.dtcRed,
+              ),
             ),
           ],
         ),
@@ -97,19 +100,19 @@ class _SplashScreen extends StatelessWidget {
   }
 }
 
-/// The four tabs, once the app is past the sign-in gate.
+/// The three tabs, once the app is past the sign-in gate.
 ///
 /// `IndexedStack` (rather than swapping the child) keeps each screen's own
 /// state - a half-typed search, a picked place - alive when switching tabs
 /// and back, instead of rebuilding it from scratch every time.
-class HomeShell extends StatefulWidget {
+class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
 
   @override
-  State<HomeShell> createState() => _HomeShellState();
+  ConsumerState<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends ConsumerState<HomeShell> {
   int _index = 0;
 
   void _openTab(int index) => setState(() => _index = index);
@@ -119,39 +122,68 @@ class _HomeShellState extends State<HomeShell> {
     // Built here rather than in a `static const` list because the home
     // screen needs a callback into this state to switch tabs.
     final screens = [
-      HomeScreen(onOpenTab: _openTab),
+      NearbyScreen(onOpenPlan: () => _openTab(1)),
       const JourneyScreen(),
-      const ByHourScreen(),
-      const RoutesScreen(),
+      const SavedScreen(),
+      const YouScreen(),
     ];
 
+    // When an alarm banner is visible it already accounts for the status
+    // bar, so the tab underneath must not add that inset a second time.
+    // Without this the app bar would start one status bar lower than usual
+    // for as long as the alarm is set.
+    final alarmActive = ref.watch(arrivalAlarmProvider).isActive;
+
+    // No SafeArea around the whole body any more. Each tab owns its top
+    // edge now: an AppBar draws under the status bar with its own inset,
+    // while the home hero paints its red gradient all the way up. Wrapping
+    // everything in one SafeArea was what left a strip of flat colour above
+    // the hero and made the app look boxed in.
     return Scaffold(
-      body: IndexedStack(index: _index, children: screens),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: _openTab,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.alt_route_outlined),
-            selectedIcon: Icon(Icons.alt_route),
-            label: 'Journey',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.schedule_outlined),
-            selectedIcon: Icon(Icons.schedule),
-            label: 'When?',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.directions_bus_outlined),
-            selectedIcon: Icon(Icons.directions_bus_filled),
-            label: 'Routes',
+      body: Column(
+        children: [
+          const ArrivalAlarmBanner(),
+          Expanded(
+            child: MediaQuery.removePadding(
+              context: context,
+              removeTop: alarmActive,
+              child: IndexedStack(index: _index, children: screens),
+            ),
           ),
         ],
+      ),
+      bottomNavigationBar: DecoratedBox(
+        decoration: const BoxDecoration(
+          border: Border(
+            top: BorderSide(color: WimbColors.hairline, width: 0.8),
+          ),
+        ),
+        child: NavigationBar(
+          selectedIndex: _index,
+          onDestinationSelected: _openTab,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.departure_board_outlined),
+              selectedIcon: Icon(Icons.departure_board),
+              label: 'Board',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.alt_route_outlined),
+              selectedIcon: Icon(Icons.alt_route),
+              label: 'Plan',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.bookmark_border),
+              selectedIcon: Icon(Icons.bookmark),
+              label: 'Saved',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person),
+              label: 'You',
+            ),
+          ],
+        ),
       ),
     );
   }
